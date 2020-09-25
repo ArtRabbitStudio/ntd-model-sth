@@ -195,15 +195,12 @@ def STH_Simulation(paramFileName, demogName, numReps=None):
     if numReps is None:
         numReps = params['numReps']
 
-    print( 'run sims' )
     # run the simulations
     results = Parallel(n_jobs=num_cores)(delayed(doRealization)(params, i) for i in range(numReps))
 
-	print( 'flatten output' )
     # flatten the output
     output = [item for sublist in results for item in sublist]
 
-	print ( 'transform to data frame' )
     # transform the output to data frame
     df = pd.DataFrame(output)
 
