@@ -1,0 +1,49 @@
+#### Hookworm parameter values. 
+
+### Model running parameters.
+repNum	500		Number of repetitions	
+nYears	22		Number of years to run.
+nYearsPostTreat	0	The number of years to run *after treatment* - i.e. post-treatment equilibration time. Will override nYears if specified.
+nHosts	500		Size of definitive host population (N) 
+outputFrequency	12	Nr of times per year to output, spaced regularly. Will override outputEvents if specified.
+outputOffset	0	Otherwise starting at zero, output will be offset by this amount. Negative values are valid (useful eg to output before treatment)
+
+
+### Social structure
+contactAgeBreaks	0 15 25 70		Contact age group breaks (minus sign necessary to include zero age)
+betaValues	1 1 1				Relative contact rates (Beta)
+rhoValues	1 1 1				Rho, contribution to the reservoir by contact age group. 
+
+### Epidemiological parameters. 
+k	0.35			Shape parameter of assumed negative binomial distribution of worms amongst host 
+lambda	3	Eggs per gram (lambda)
+R0	9.5	Basic reproductive number (R0)   
+ReservoirDecayRate	30	Reservoir decay rate (decay rate of eggs in the environment)
+sigma	0.5		Worm death rate (sigma) i.e. 1/worm_life_span, same for all development stages
+gamma	0.02	Exponential density dependence of parasite adult stage (gamma) N.B. fecundity parameter z = exp(-gamma)
+
+### Sexual reproduction styles. 
+reproFuncName	epgFertility	## name of function for reproduction (a string).  [Deterministic] 
+StochSR	TRUE		## Turn SR on or off in the stochastic model. 	[Stochastic]  
+
+### Treatment parameters. 
+treatmentBreaks	0 2 5 15 70		Minimum age of each treatment group (minus sign necessary to include zero age): Infants; Pre-SAC; SAC; Adults
+coverage	0 0.75 0.75 0		Coverages [0-1]: Infants; Pre-SAC; SAC; Adults. 
+drugEff	0.95					Drug efficacy [0-1]
+treatStart	1				Treatment year start 
+nRounds	42					Number of treatment rounds. in moderate-prevalence settings 2x nYears-1, because treatment occurs 2x a year
+treatInterval	0.5			interval between treatments in years.	
+delayToTreat	0	duration of delay because of covid-2019 in years --> overriden by values read in from batch file
+delayStart	2	time when delay starts in years since programme start
+
+### High worm burden. not used in this simulation
+highBurdenBreaks	0 5 10 100	## Three categories here. 
+highBurdenValues	20 30 40	## Corresponding values. Using HIGH VALUES from Chan now. 
+
+### Size parameter of negative binomial for KK test
+k_epg	0.35	
+
+### Simulation-specific parameters
+nNodes	8	## number of cores, in practice automatically set by cluster 
+maxStep	0.01923	## max time step for deterministic update of freeliving populations, approx 1/52
+seed	123	## 
