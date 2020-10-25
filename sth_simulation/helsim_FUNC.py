@@ -1,11 +1,7 @@
 import numpy as np
 import pandas as pd
-from scipy.optimize import bisect
-from scipy.stats import nbinom
-import warnings
+import copy
 import pkg_resources
-warnings.filterwarnings('ignore')
-np.seterr(divide='ignore')
 
 import sth_simulation.ParallelFuncs as ParallelFuncs
 
@@ -128,7 +124,6 @@ def readParams(paramFileName, demogFileName='Demographies.txt', demogName='Defau
 
     params = {'numReps': np.int(parameters['repNum']),
               'maxTime': parameters['nYears'],
-              'nYearsPostTreat': parameters['nYearsPostTreat'],
               'N': np.int(parameters['nHosts']),
               'R0': parameters['R0'],
               'lambda': parameters['lambda'],
@@ -137,17 +132,10 @@ def readParams(paramFileName, demogFileName='Demographies.txt', demogName='Defau
               'sigma': parameters['sigma'],
               'LDecayRate': parameters['ReservoirDecayRate'],
               'DrugEfficacy': parameters['drugEff'],
-              'chemoTimings': 1.0,
-              'delay': parameters['delayToTreat'],
-              'delayStart': parameters['delayStart'],
               'contactAgeBreaks': parameters['contactAgeBreaks'],
               'treatmentAgeBreaks': parameters['treatmentBreaks'],
-              'nRounds': parameters['nRounds'],
               'contactRates': parameters['betaValues'],
               'rho': parameters['rhoValues'],
-              'coverage': parameters['coverage'],
-              'treatInterval': parameters['treatInterval'],
-              'treatmentStart': parameters['treatStart'],
               'outputFrequency': parameters['outputFrequency'],
               'outputOffset': parameters['outputOffset'],
               'highBurdenBreaks': parameters['highBurdenBreaks'],
@@ -204,64 +192,29 @@ def configure(params):
     maxAgeIndex = np.argmax([params['muAges'] > params['maxHostAge']]) - 1
 
     # cumulative probability of dying
-    params['hostAgeCumulDistr'] = np.append(np.cumsum(dT * params['hostMu'] * np.append(1,
-    params['hostSurvivalCurve'][:-1]))[:maxAgeIndex], 1)
-
+    params['hostAgeCumulDistr'] = np.append(np.cumsum(dT * params['hostMu'] * np.append(1, params['hostSurvivalCurve'][: -1]))[:maxAgeIndex], 1)
     params['contactAgeGroupBreaks'] = np.append(params['contactAgeBreaks'][:-1], params['maxHostAge'])
     params['treatmentAgeGroupBreaks'] = np.append(params['treatmentAgeBreaks'][:-1], params['maxHostAge'] + dT)
 
-    if pd.notna(params['nYearsPostTreat']) and params['nYearsPostTreat'] > 0:
+    # monogamous fertility function parameters
+    if params['reproFuncName'] == 'epgMonog':
+        params['monogParams'] = ParallelFuncs.monogFertilityConfig(params)
 
-        # if nYearsPostTreat is specified, update maxTime to the year required
-        params['maxTime'] = params['treatmentStart'] + (params['nRounds'] * params['treatInterval']) +\
-        params['nYearsPostTreat']
+    # time points included in simulation output
+    params['outTimings'] = np.arange(start=params['outputOffset'], stop=params['maxTime'],
+    step=1 / params['outputFrequency'])
 
-    if pd.notna(params['outputFrequency']):
-
-        # if outputFrequency is specified, update the output times accordingly
-        params['outTimings'] = np.arange(start=params['outputOffset'], stop=params['maxTime'] + \
-        (1 / params['outputFrequency']), step=1 / params['outputFrequency'])
-
-        # if there are any times smaller than zero, then reset those to zero
-        params['outTimings'][params['outTimings'] < 0] = 0
-        
+    # make sure that the last time point is always included
     if params['outTimings'][-1] != params['maxTime']:
         params['outTimings'] = np.append(params['outTimings'], params['maxTime'])
 
-    if params['reproFuncName'] == 'epgMonog':
-        params['monogParams'] = ParallelFuncs.monogFertilityConfig(params)
-        
+    # if there are any time points smaller than zero, then reset those to zero
+    params['outTimings'][params['outTimings'] < 0] = 0
+
+    # make sure that there are no duplicate time points
+    params['outTimings'] = np.unique(np.round(params['outTimings'], 4))
+
     return params
-
-def updateChemoTimings(params):
-
-    '''
-    This function updates the chemo timings.
-
-    Parameters
-    ----------
-    params: dict
-        dictionary containing the parameter names and values;
-
-    Returns
-    -------
-    chemoTimings: array
-        array containing the chemo timings;
-    '''
-
-    chemoTimings = np.arange(start=params['treatmentStart'],
-                             stop=params['maxTime'] + params['treatInterval'],
-                             step=params['treatInterval'])
-
-    missedTimings = np.arange(start=params['delayStart'],
-                              stop=params['delayStart'] + params['delay'] + params['treatInterval'],
-                              step=params['treatInterval'])
-
-    chemoTimings = np.array([x for x in chemoTimings if x not in missedTimings])
-    chemoTimings = np.append(chemoTimings, params['delayStart'] + params['delay'])
-    chemoTimings = np.unique(chemoTimings)
-
-    return chemoTimings
 
 def setupSD(params):
 
@@ -306,9 +259,7 @@ def setupSD(params):
     labels=np.arange(start=0, stop=len(params['equiData']['ageValues']))).to_numpy()
 
     wTotal = np.random.poisson(lam=si * params['equiData']['hatProfile'][meanBurdenIndex] * 2, size=params['N'])
-
     worms = dict(total=wTotal, female=np.random.binomial(n=wTotal, p=0.5, size=params['N']))
-
     stableFreeLiving = params['equiData']['L_stable'] * 2
 
     SD = {'si': si,
@@ -343,47 +294,6 @@ def calcRates(params, SD):
     deathRate = params['sigma'] * np.sum(SD['worms']['total'])
 
     return np.append(hostInfRates, deathRate)
-
-def doEvent(rates, SD):
-
-    '''
-    This function enacts the event; the events are
-    new worms and worms death.
-
-    Parameters
-    ----------
-    rates: float
-        array of event rates;
-
-    SD: dict
-        dictionary containing the initial equilibrium parameter values;
-
-    Returns
-    -------
-    SD: dict
-        dictionary containing the updated equilibrium parameter values;
-    '''
-
-    # determine which event takes place; if it's 1 to N, it's a new worm, otherwise it's a worm death
-    event = np.argmax(np.random.uniform(low=0, high=1, size=1) * np.sum(rates) < np.cumsum(rates))
-
-    if event == len(rates) - 1: # worm death event
-
-        deathIndex = np.argmax(np.random.uniform(low=0, high=1, size=1) * np.sum(SD['worms']['total']) < np.cumsum(SD['worms']['total']))
-
-        SD['worms']['total'][deathIndex] -= 1
-
-        if np.random.uniform(low=0, high=1, size=1) < SD['worms']['female'][deathIndex] / SD['worms']['total'][deathIndex]:
-            SD['worms']['female'][deathIndex] -= 1
-
-    else: # new worm event
-
-        SD['worms']['total'][event] += 1
-
-        if np.random.uniform(low=0, high=1, size=1) < 0.5:
-            SD['worms']['female'][event] += 1
-
-    return SD
 
 def doFreeLive(params, SD, dt):
 
@@ -421,6 +331,7 @@ def doFreeLive(params, SD, dt):
     eggOutputPerHost = params['lambda'] * productivefemaleworms * np.exp(-productivefemaleworms * params['gamma'])
     eggsProdRate = 2 * params['psi'] * np.sum(eggOutputPerHost * params['rho'][SD['contactAgeGroupIndices']]) / params['N']
     expFactor = np.exp(-params['LDecayRate'] * dt)
+
     SD['freeLiving'] = SD['freeLiving'] * expFactor + eggsProdRate * (1 - expFactor) / params['LDecayRate']
 
     return SD
@@ -491,14 +402,21 @@ def getAttendance(adherenceFactors, coverage):
     boolean array with True / False attendance indicators;
     '''
 
-    p = adherenceFactors ** ((1 - coverage) / coverage)
+    # attendance is undefined if coverage is NaN or zero
+    attendance = []
+    for i in range(len(coverage)):
+        if pd.notna(coverage[i]) and coverage[i] != 0:
+            p = adherenceFactors[i] ** ((1 - coverage[i]) / coverage[i])
+            attendance.append((np.random.uniform(low=0, high=1, size=1) < p)[0])
+        else:
+            attendance.append(False)
 
-    return np.random.uniform(low=0, high=1, size=len(p)) < p
+    return attendance
 
-def doChemo(params, SD):
+def doChemo(params, SD, mdaRound):
 
     '''
-    Chemoterapy function.
+    Chemotherapy function.
 
     Parameters
     ----------
@@ -508,15 +426,26 @@ def doChemo(params, SD):
     SD: dict
         dictionary containing the initial equilibrium parameter values;
 
+    mdaRound: int;
+        index of current chemotherapy time, used to extract the
+        corresponding age-dependent coverage fractions.
+
     Returns
     -------
     SD: dict
         dictionary containing the updated equilibrium parameter values;
     '''
 
+    # coverage is undefined if -birthDate is negative and treatmentAgeGroupIndices is NaN
+    coverage = []
+    for i in range(len(SD['treatmentAgeGroupIndices'])):
+        if pd.notna(SD['treatmentAgeGroupIndices'][i]) and SD['treatmentAgeGroupIndices'][i] > 0:
+            coverage.append(params['coverage'][mdaRound, :][np.int(SD['treatmentAgeGroupIndices'][i])])
+        else:
+            coverage.append(np.nan)
+
     # decide which individuals are treated, treatment is random
-    attendance = getAttendance(np.random.uniform(low=0, high=1, size=params['N']),
-    params['coverage'][SD['treatmentAgeGroupIndices']])
+    attendance = getAttendance(np.random.uniform(low=0, high=1, size=params['N']), coverage)
 
     # calculate the number of dead worms
     femaleToDie = np.random.binomial(size=np.sum(attendance), n=SD['worms']['female'][attendance],
@@ -558,9 +487,6 @@ def getPsi(params):
     hostSurvivalCurve = np.exp(-np.cumsum(hostMu * deltaT))
     MeanLifespan = np.sum(hostSurvivalCurve[:len(modelAges)]) * deltaT
 
-    # calculate the cumulative sum of host and worm death rates from which to calculate worm survival
-    # intMeanWormDeathEvents = np.cumsum(hostMu + params['sigma']) * deltaT # commented out as it is not used
-
     modelAgeGroupCatIndex = pd.cut(x=modelAges, bins=params['contactAgeGroupBreaks'], labels=np.arange(start=0,
     stop=len(params['contactAgeGroupBreaks']) - 1)).to_numpy()
 
@@ -572,7 +498,7 @@ def getPsi(params):
     B = np.array([np.sum(betaAge[: i] * np.flip(wSurvival[: i])) * deltaT for i in range(1, 1 + len(hostMu))])
 
     return params['R0'] * MeanLifespan * params['LDecayRate'] / (params['lambda'] * params['z'] *
-    np.sum(rhoAge * hostSurvivalCurve * B) * deltaT)
+           np.sum(rhoAge * hostSurvivalCurve * B) * deltaT)
 
 def getLifeSpans(nSpans, params):
 
@@ -656,7 +582,7 @@ def getEquilibrium(params):
     def K_valueFunc(currentL, params):
 
         return params['psi'] * np.sum(params['reproFunc'](currentL * Q, params) * rhoAge * hostSurvivalCurve * deltaT) / \
-        (MeanLifespan * params['LDecayRate']) - currentL
+               (MeanLifespan * params['LDecayRate']) - currentL
 
     K_values = np.vectorize(K_valueFunc)(currentL=test_L, params=params)
 
@@ -665,7 +591,6 @@ def getEquilibrium(params):
     mid_L = test_L[iMax]
 
     if K_values[iMax] < 0:
-
         return dict(stableProfile=0 * Q,
                     ageValues=modelAges,
                     L_stable=0,
@@ -675,13 +600,13 @@ def getEquilibrium(params):
                     FOIMultiplier=FOIMultiplier)
 
     # find the top L
-    L_stable = bisect(f=K_valueFunc, a=mid_L, b=4 * L_hat, args=(params))
+    L_stable = ParallelFuncs.Bisect(f=K_valueFunc, a=mid_L, b=4 * L_hat, args=(params))
 
     # find the unstable L
     L_break = test_L[1] / 50
 
-    if K_valueFunc(L_break, params) < 0: # if it is less than zero at this point, find the zero
-        L_break = bisect(f=K_valueFunc, a=L_break, b=mid_L, args=(params))
+    if K_valueFunc(L_break, params) < 0:  # if it is less than zero at this point, find the zero
+        L_break = ParallelFuncs.Bisect(f=K_valueFunc, a=L_break, b=mid_L, args=(params))
 
     stableProfile = L_stable * Q
     hatProfile = L_hat * Q
@@ -800,9 +725,7 @@ def getWormCountsByVillage(SD, t, ageBand, params, nSamples=1, Unfertilized=True
     labels=np.array([1, 2, 3])).to_numpy()
 
     currentAgeGroupMeanEggCounts = meanEggCounts[ageGroups == 2]
-
     villageSampleSize = np.int(np.floor(len(currentAgeGroupMeanEggCounts) * hostSampleSizeFrac))
-    
     meanEggCountSample = np.random.choice(a=currentAgeGroupMeanEggCounts, size=villageSampleSize, replace=False)
 
     return dict(meanEggCountSample=meanEggCountSample, villageSampleSize=villageSampleSize)
@@ -844,165 +767,331 @@ def getAgeCatSampledPrevByVillage(SD, t, ageBand, params, nSamples=1, Unfertiliz
 
     return np.sum(countData['meanEggCountSample'] > 0.9) / countData['villageSampleSize']
 
-def getMeanInfectionIntensity(SD, t, ageBand, params, nSamples=1, Unfertilized=True, hostSampleSizeFrac=1.0):
+def doEvents(rates, SD, dt):
 
     '''
-    This function provides prevalence of medium and heavy infection in a village.
+    This function enacts multiple events; the events are
+    new worms and worms death.
 
     Parameters
     ----------
+    rates: float
+        array of event rates;
+
     SD: dict
-        dictionary containing the equilibrium parameter values;
+        dictionary containing the initial equilibrium parameter values;
 
-    t: int
-        time step;
+    dt: float
+        time interval;
 
-    ageBand: int
-        array with age group boundaries;
+    Returns
+    -------
+    SD: dict
+        dictionary containing the updated equilibrium parameter values;
+    '''
 
+    # make new worms
+    L = len(rates) - 1
+
+    females = np.random.poisson(lam=dt * rates[:-1] / 2, size=L)
+    males = np.random.poisson(lam=dt * rates[:-1] / 2, size=L)
+
+    SD['worms']['total'] += males + females
+    SD['worms']['female'] += females
+
+    total = np.sum(SD['worms']['total'])
+
+    # kill some worms
+    if total > 0:
+
+        females = np.random.poisson(lam=dt * rates[-1] * SD['worms']['female'] / total, size=L)
+        males = np.random.poisson(lam=dt * rates[-1] * (SD['worms']['total'] - SD['worms']['female']) / total, size=L)
+
+        # don't kill worms that don't exist
+        females = np.minimum(females, SD['worms']['female'])
+        males = np.minimum(males, SD['worms']['total'] - SD['worms']['female'])
+
+        SD['worms']['total'] -= males + females
+        SD['worms']['female'] -= females
+
+    return SD
+
+def doRealization(params, seed):
+
+    '''
+    This function generates a single simulation path
+    starting from time zero.
+
+    Parameters
+    ----------
     params: dict
         dictionary containing the parameter names and values;
 
-    nSamples: int
-        number of samples;
-
-    Unfertilized: bool
-        True / False flag for whether unfertilized worms generate eggs;
-
-    hostSampleSizeFrac: float;
-        host sample size fraction;
+    seed: int
+        random seed;
 
     Returns
     -------
-    d: dict
-        dictionary with the average, 5th percentile and 95th percentile of the sampled egg count;
+    simData: dict
+        dictionary with simulation results;
     '''
 
-    countData = getWormCountsByVillage(SD, t, ageBand, params, nSamples, Unfertilized, hostSampleSizeFrac)
+    # set the random seed
+    np.random.seed(seed)
 
-    return dict(mean=np.mean(countData['meanEggCountSample']), CRI95=np.percentile(a=countData['meanEggCountSample'],
-    q=np.array([5, 95])))
+    # initialize the simulation data
+    simData = setupSD(params)
 
-def villageTruePrev(SD, params, nSamples=1, Unfertilized=True):
+    # start time
+    t = 0
+
+    # end time
+    maxTime = copy.deepcopy(params['maxTime'])
+
+    # max step
+    maxStep = copy.deepcopy(params['maxStep'])
+
+    # time at which to update the freelive population
+    freeliveTime = t
+
+    # times at which data should be recorded
+    outTimes = copy.deepcopy(params['outTimings'])
+
+    # times at which chemotherapy is given
+    chemoTimes = copy.deepcopy(params['chemoTimings'])
+
+    # time when data should be recorded next
+    nextOutIndex = np.argmin(outTimes)
+    nextOutTime = outTimes[nextOutIndex]
+
+    # time at which individuals' age is advanced next
+    ageingInt = 1 / 52
+    nextAgeTime = 1 / 52
+    tau = 1 / 52
+
+    # time at which individuals receive next chemotherapy
+    nextChemoIndex = np.argmin(chemoTimes)
+    nextChemoTime = chemoTimes[nextChemoIndex]
+
+    # next event
+    nextStep = np.min([nextOutTime, t + maxStep, nextAgeTime, nextChemoTime])
+
+    # initialise empty list to store results
+    prevalence = []
+
+    # counter for chemotherapy treatments
+    mdaRound = 0
+
+    # run stochastic algorithm
+    while t + 0.001 < maxTime:
+
+        rates = calcRates(params, simData)
+        sumRates = np.sum(rates)
+
+        if sumRates > 0.001:
+
+            dt = np.min([tau, nextStep - t, maxTime - t])
+            simData = doEvents(rates, simData, dt)
+
+        else:
+
+            dt = nextStep - t
+
+        if t + dt < nextStep:
+
+            t += dt
+
+        else:
+
+            t = nextStep
+            simData = doFreeLive(params, simData, nextStep - freeliveTime)
+            freeliveTime = nextStep
+            timeBarrier = nextStep + 0.001
+
+            # ageing and death
+            if timeBarrier > nextAgeTime:
+
+                simData = doDeath(params, simData, t)
+                nextAgeTime += ageingInt
+
+            # chemotherapy
+            if timeBarrier > nextChemoTime:
+
+                simData = doDeath(params, simData, t)
+                simData = doChemo(params, simData, mdaRound)
+                chemoTimes[nextChemoIndex] = maxTime + 10
+                nextChemoIndex = np.argmin(chemoTimes)
+                nextChemoTime = chemoTimes[nextChemoIndex]
+                mdaRound += 1
+
+            # output
+            if timeBarrier > nextOutTime:
+
+                prevalence.append(getAgeCatSampledPrevByVillage(simData, t, np.array([5, 14]), params))
+
+                outTimes[nextOutIndex] = maxTime + 10
+                nextOutIndex = np.argmin(outTimes)
+                nextOutTime = outTimes[nextOutIndex]
+
+            nextStep = np.min([nextOutTime, t + maxStep, nextAgeTime])
+
+    # save the state of the simulations
+    simData['state'] = np.random.get_state()
+
+    # save the simulation times
+    simData['times'] = {'start_time': 0,
+                        'end_time': t,
+                        'maxTime': maxTime,
+                        'freeliveTime': freeliveTime,
+                        'nextStep': nextStep,
+                        'nextAgeTime': nextAgeTime}
+
+    # save the output times
+    simData['outTimings'] = params['outTimings']
+
+    # save the simulated prevalence
+    simData['prevKKSAC'] = prevalence
+
+    return simData
+
+def addRealization(params, simData, times, state):
 
     '''
-    This function calculates the true prevalence across all hosts in a village.
+    This function generates a single simulation path
+    starting from a past time point different from zero.
 
     Parameters
     ----------
-    SD: dict
-        dictionary containing the equilibrium parameter values;
-
     params: dict
         dictionary containing the parameter names and values;
 
-    nSamples: int
-        number of samples;
+    simData: dict
+        dictionary with previous simulation results;
 
-    Unfertilized: bool
-        True / False flag for whether unfertilized worms generate eggs;
+    times: dict
+        dictionary with previous simulation times;
 
-    Returns
-    -------
-    true prevalence of village;
-    '''
-
-    return np.mean(getSetOfBernoulliMeans(SD['worms']['total'], SD['worms']['female'], params, nSamples, Unfertilized))
-
-def villageTruePrev2(SD):
-
-    '''
-    This function calculates the true prevalence across all hosts in a village.
-
-    Parameters
-    ----------
-    SD: dict
-        dictionary containing the equilibrium parameter values;
+    state: array
+        random state;
 
     Returns
     -------
-    true prevalence of village;
+    simData: dict
+        dictionary with new simulation results;
     '''
 
-    return np.sum(SD['worms']['total'] > 0) / len(SD['worms']['total'])
+    # set the random state
+    np.random.set_state(state)
 
-def getSetOfBernoulliMeans(total, female, params, nSamples=1, Unfertilized=True):
+    # start time
+    t = copy.deepcopy(times['end_time'])
 
-    '''
-    This function calculates the expectation of detection for each host in a village.
+    # end time
+    maxTime = copy.deepcopy(params['maxTime'])
 
-    Parameters
-    ----------
+    # max step
+    maxStep = copy.deepcopy(params['maxStep'])
 
-    total: int
-        array of female worms;
+    # time at which to update the freelive population
+    freeliveTime = copy.deepcopy(times['freeliveTime'])
 
-    female: int
-        array of female worms;
+    # times at which data should be recorded
+    outTimes = copy.deepcopy(params['outTimings'])
 
-    params: dict
-        dictionary containing the parameter names and values;
+    # times at which chemotherapy is given
+    chemoTimes = copy.deepcopy(params['chemoTimings'])
 
-    nSamples: int
-        number of samples;
+    # time when data should be recorded next
+    nextOutIndex = np.argmin(outTimes)
+    nextOutTime = outTimes[nextOutIndex]
 
-    Unfertilized: bool
-        True / False flag for whether unfertilized worms generate eggs;
+    # time at which individuals' age is advanced next
+    ageingInt = 1 / 52
+    nextAgeTime = copy.deepcopy(times['nextAgeTime'])
+    tau = 1 / 52
 
-    Returns
-    -------
-    array of host means for detection from a village;
-    '''
+    # time at which individuals receive next chemotherapy
+    nextChemoIndex = np.argmin(chemoTimes)
+    nextChemoTime = chemoTimes[nextChemoIndex]
 
-    if Unfertilized:
+    # next event
+    nextStep = copy.deepcopy(times['nextStep'])
 
-        meanCount = female * params['lambda'] * params['z'] ** female
+    # initialise empty list to store results
+    prevalence = []
 
-    else:
+    # counter for chemotherapy treatments
+    mdaRound = 0
 
-        eggProducers = np.where(total == female, 0, female)
-        meanCount = eggProducers * params['lambda'] * params['z'] ** eggProducers
+    # run stochastic algorithm
+    while t + 0.001 < maxTime:
 
-    p_positive = 1 - nbinom.pmf(k=0, p=params['k_epg'] / (meanCount + params['k_epg']), n=params['k_epg'])
+        rates = calcRates(params, simData)
+        sumRates = np.sum(rates)
 
-    return 1 - (1 - p_positive) ** nSamples
+        if sumRates > 0.001:
 
-def getMediumHeavyPrevalenceByVillage(SD, t, ageBand, eggCountThreshold, params, nSamples=1, Unfertilized=True, hostSampleSizeFrac=1.0):
+            dt = np.min([tau, nextStep - t, maxTime - t])
+            simData = doEvents(rates, simData, dt)
 
-    '''
-    This function calculates the prevalence by village.
+        else:
 
-    Parameters
-    ----------
-    SD: dict
-        dictionary containing the equilibrium parameter values;
+            dt = nextStep - t
 
-    t: int
-        time step;
+        if t + dt < nextStep:
 
-    ageBand: int
-        array with age group boundaries;
+            t += dt
 
-    eggCountThreshold: float
-        intensity threshold;
+        else:
 
-    params: dict
-        dictionary containing the parameter names and values;
+            t = nextStep
+            simData = doFreeLive(params, simData, nextStep - freeliveTime)
+            freeliveTime = nextStep
+            timeBarrier = nextStep + 0.001
 
-    nSamples: int
-        number of samples;
+            # ageing and death
+            if timeBarrier > nextAgeTime:
 
-    Unfertilized: bool
-        True / False flag for whether unfertilized worms generate eggs;
+                simData = doDeath(params, simData, t)
+                nextAgeTime += ageingInt
 
-    hostSampleSizeFrac: float;
-        host sample size fraction;
+            # chemotherapy
+            if timeBarrier > nextChemoTime:
 
-    Returns
-    -------
-    prevalence by village;
-    '''
+                simData = doDeath(params, simData, t)
+                simData = doChemo(params, simData, mdaRound)
+                chemoTimes[nextChemoIndex] = maxTime + 10
+                nextChemoIndex = np.argmin(chemoTimes)
+                nextChemoTime = chemoTimes[nextChemoIndex]
 
-    countData = getWormCountsByVillage(SD, t, ageBand, params, nSamples, Unfertilized, hostSampleSizeFrac)
+                mdaRound += 1
 
-    return np.sum(countData['meanEggCountSample'] >= eggCountThreshold) / countData['villageSampleSize']
+            # output
+            if timeBarrier > nextOutTime:
+
+                prevalence.append(getAgeCatSampledPrevByVillage(simData, t, np.array([5, 14]), params))
+
+                outTimes[nextOutIndex] = maxTime + 10
+                nextOutIndex = np.argmin(outTimes)
+                nextOutTime = outTimes[nextOutIndex]
+
+            nextStep = np.min([nextOutTime, t + maxStep, nextAgeTime])
+
+    # save the state of the simulations
+    simData['state'] = np.random.get_state()
+
+    # save the simulation times
+    simData['times'] = {'start_time': times['end_time'],
+                        'end_time': t,
+                        'maxTime': maxTime,
+                        'freeliveTime': freeliveTime,
+                        'nextStep': nextStep,
+                        'nextAgeTime': nextAgeTime}
+
+    # save the output times
+    simData['outTimings'] = params['outTimings']
+
+    # save the simulated prevalence
+    simData['prevKKSAC'] = prevalence
+
+    return simData
