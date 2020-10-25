@@ -1,5 +1,37 @@
 import numpy as np
-from scipy.special import gamma
+from math import gamma
+
+def Bisect(f, a, b, args):
+
+    '''
+    Replace scipy.optimize.bisect.
+    '''
+
+    for i in range(54):
+
+        m = (a + b) / 2.0
+
+        if f(a, args) * f(m, args) > 0:
+
+            a = m
+
+        else:
+
+            b = m
+
+    return m
+
+def NegativeBinomial(k, p, n):
+
+    '''
+    Replace scipy.stats.nbinom.pmf.
+    '''
+
+    def binom(n, k):
+
+        return 1 if k == 0 or k == n else np.prod([(n + 1 - i) / i for i in range(1, k + 1)])
+
+    return binom(k + n - 1, n - 1) * ((1 - p) ** k) * (p ** n)
 
 def epgPerPerson(x, params):
 

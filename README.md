@@ -4,42 +4,68 @@ To run the STH simulation model, import the `STH_Simulation()` function from the
 
 The `STH_Simulation()` function requires the following inputs:
 
-- `paramFileName`: name of the input file with the model parameters. The available files are listed in the following table.
+    paramFileName: str
+        This is the name of the input text file with the
+        model parameters.
 
-| paramFileName |
-| :--- | 
-| AscarisParameters_high.txt | 
-| AscarisParameters_moderate.txt  | 
-| HookwormParameters_high.txt | 
-| HookwormParameters_moderate.txt  | 
-| TrichurisParameters_high.txt | 
-| TrichurisParameters_moderate.txt  | 
+    demogName: str
+        This is the subset of demography parameters to be
+        extracted from the Demographies.txt file.
 
-- `demogName`: name of the demography. The available demographies are listed in the following table.
+    MDAFilePath: str
+        This is the path to the input CSV file with the
+        MDA times and with the respective coverage
+        fractions for each age group.
 
-| demogName | 
-| :--- | 
-| Default | 
-| WHOGeneric  | 
-| UgandaRural | 
-| KenyaKDHS  | 
-| Flat | 
+    PrevFilePath: str
+        This is the path where the output CSV file with
+        the simulated prevalence will be saved.
 
-- `numReps`: number of simulations. If not provided, the number of simulations is extracted from the parameters file.
+    RkFilePath: str
+        This is the path to the input CSV file with the
+        random seed, R0, and k to be used for each simulation.
+        If not provided, the code will use the parameters
+        in the input text file.
 
-The `STH_Simulation()` function returns a data frame with the following columns: `iteration`, `time`, `prevKKSAC`, 
-`prevKKAll`, `prevTrue`, `prevTrue2`, `meanIntensitySAC`, `meanIntensityAll`, `prevHISAC`, and `prevMHISAC`.
+    nYears: int
+        This is the number of years for which the
+        simulations will be performed.
 
-The output data frame can be exported in several different formats; see `sth_results.json` for an example of the results in JSON format.
+    outputFrequency: int
+        This is the number of time points saved down
+        in the CSV file for each year.
 
-See also `sth_run.py` for an example of how to use the `STH_Simulation()` function.
+    numReps: int
+        This is the number of simulations. If not provided,
+        the number of simulations will be inferred from the
+        input text file or CSV file.
+
+    SaveOutput: bool
+        If True, the last state of the simulations will
+        be saved in a pickle file. If False, the last
+        state of the simulations will not be saved.
+
+    OutSimFilePath: str
+        This is the path where the output pickle file with
+        the last state of the simulations will be saved. It
+        is only required when SaveOutput = True.
+
+    InSimFilePath: str
+        This is the path where the input pickle file with
+        the last state of the simulations has been saved.
+        If this is provided, the code will resume the
+        previous simulations from this state. If this is
+        not provided, the code will start new simulations
+        from scratch.
+        
+Some examples are included in the Jupyter notebook `sth_tests.ipynb` in the `tests` folder.
 
 ### How to run
 
-- Install [pipenv](https://drive.google.com/drive/folders/1Or6lUkymYd_p031xKGZLcnTV4GYf-oYb) according to the instructions for your OS, then `cd` to the project directory and run:
+Install [pipenv](https://drive.google.com/drive/folders/1Or6lUkymYd_p031xKGZLcnTV4GYf-oYb) according to the instructions for your OS, then `cd` to the project directory and run:
 
 ```
     $ pipenv install . # sets up per-project python environment ('env')
     $ pipenv shell # starts a per-project shell using that env
-    (ntd-model-trachoma) $ python trachoma_run.py # runs the model
+    (ntd-model-sth) $ python sth_run.py # runs the model
 ```
