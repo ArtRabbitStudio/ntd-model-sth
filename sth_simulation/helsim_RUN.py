@@ -2,9 +2,25 @@ from joblib import Parallel, delayed
 import multiprocessing
 import pickle
 import time
+import functools
+import datetime
 
 from sth_simulation.helsim_FUNC import *
 
+def timer(func):
+    """Print the runtime of the decorated function"""
+    @functools.wraps(func)
+    def wrapper_timer(*args, **kwargs):
+        start_time = time.perf_counter()    # 1
+        print(f"-> Running {func.__name__!r}, starting at {datetime.datetime.now()}")
+        value = func(*args, **kwargs)
+        end_time = time.perf_counter()      # 2
+        run_time = end_time - start_time    # 3
+        print(f"=> Finished {func.__name__!r} in {run_time:.4f} secs\n\n")
+        return value
+    return wrapper_timer
+
+@timer
 def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevFilePath, RkFilePath=None, nYears=None,
                    outputFrequency=None, numReps=None, SaveOutput=False, OutSimFilePath=None, InSimFilePath=None):
 
