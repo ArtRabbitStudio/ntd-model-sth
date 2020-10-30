@@ -16,7 +16,7 @@ def timer(func):
         value = func(*args, **kwargs)
         end_time = time.perf_counter()      # 2
         run_time = end_time - start_time    # 3
-        print(f"=> Finished {func.__name__!r} in {run_time:.4f} secs\n\n")
+        print(f"=> Finished {func.__name__!r} in {run_time:.4f} secs")
         return value
     return wrapper_timer
 
@@ -155,22 +155,28 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevFilePath, RkFilePa
 
             def multiple_simulations(params, i):
 
+                # copy the parameters
+                parameters = copy.deepcopy(params)
+
                 # update the parameters
-                params['R0'] = R0[i]
-                params['k'] = k[i]
+                parameters['R0'] = R0[i]
+                parameters['k'] = k[i]
 
                 # configure the parameters
-                params = configure(params)
-                params['psi'] = getPsi(params)
-                params['equiData'] = getEquilibrium(params)
-                params['moderateIntensityCount'], params['highIntensityCount'] = setIntensityCount(paramFileName)
+                parameters = configure(parameters)
+                parameters['psi'] = getPsi(parameters)
+                parameters['equiData'] = getEquilibrium(parameters)
+                parameters['moderateIntensityCount'], parameters['highIntensityCount'] = setIntensityCount(paramFileName)
 
                 # generate a simulation path
-                return doRealization(params=params, seed=seed[i])
+                return doRealization(params=parameters, seed=seed[i])
 
         else:  # continue previous simulations
 
             def multiple_simulations(params, i):
+
+                # copy the parameters
+                parameters = copy.deepcopy(params)
 
                 # load the previous simulation results
                 data = pickle.load(open(InSimFilePath, 'rb'))[i]
@@ -186,24 +192,25 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevFilePath, RkFilePa
                 times = data['times']
 
                 # increment the simulation times
-                params['maxTime'] += times['maxTime']
-                params['outputOffset'] = times['end_time'] + 1 / params['outputFrequency']
+                parameters['maxTime'] += times['maxTime']
+                parameters['outputOffset'] = times['end_time'] + 1 / parameters['outputFrequency']
 
                 # update the parameters
-                params['R0'] = R0[i]
-                params['k'] = k[i]
+                parameters['R0'] = R0[i]
+                parameters['k'] = k[i]
 
                 # configure the parameters
-                params = configure(params)
-                params['psi'] = getPsi(params)
-                params['equiData'] = getEquilibrium(params)
-                params['moderateIntensityCount'], params['highIntensityCount'] = setIntensityCount(paramFileName)
+                parameters = configure(parameters)
+                parameters['psi'] = getPsi(parameters)
+                parameters['equiData'] = getEquilibrium(parameters)
+                parameters['moderateIntensityCount'], parameters['highIntensityCount'] = setIntensityCount(paramFileName)
 
                 # add a simulation path
-                return addRealization(params=params, simData=simData, times=times, state=state)
+                return addRealization(params=parameters, simData=simData, times=times, state=state)
 
         # run the simulations
         num_cores = multiprocessing.cpu_count()
+        print( f"Running STH_Simulation on {num_cores} cores" )
 
         start_time = time.time()
 
