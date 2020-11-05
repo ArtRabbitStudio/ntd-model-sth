@@ -1,0 +1,8 @@
+# vi: ft=Dockerfile
+FROM python:3.8-buster
+
+RUN pip3 install numpy pandas joblib flask
+RUN git clone https://github.com/artrabbitstudio/ntd-model-sth.git
+WORKDIR ntd-model-sth/
+RUN git checkout dockerize
+RUN pip3 install .

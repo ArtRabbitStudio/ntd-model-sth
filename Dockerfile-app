@@ -1,0 +1,12 @@
+# vi: ft=Dockerfile
+FROM sth-image
+
+WORKDIR /ntd-model-sth
+COPY flask_app.py flask_app.py
+COPY gcs.py gcs.py
+COPY files/Asc_22609/ files/Asc_22609/
+
+EXPOSE 5000
+
+ENTRYPOINT [ "python" ]
+CMD [ "flask_app.py" ]

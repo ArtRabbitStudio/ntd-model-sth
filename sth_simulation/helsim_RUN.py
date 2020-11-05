@@ -1,9 +1,11 @@
-from joblib import Parallel, delayed
 import multiprocessing
 import pickle
 import time
 import functools
 import datetime
+import gcs
+
+from joblib import Parallel, delayed
 
 from sth_simulation.helsim_FUNC import *
 
@@ -22,7 +24,8 @@ def timer(func):
 
 @timer
 def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevFilePath, RkFilePath=None, nYears=None,
-                   outputFrequency=None, numReps=None, SaveOutput=False, OutSimFilePath=None, InSimFilePath=None):
+                   outputFrequency=None, numReps=None, SaveOutput=False, OutSimFilePath=None, InSimFilePath=None,
+                   useCloudStorage=False):
 
     '''
     Longitudinal simulations.
@@ -173,13 +176,16 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevFilePath, RkFilePa
 
         else:  # continue previous simulations
 
+            # load the previous simulation results
+            pickleData = pickle.loads( gcs.get_blob( InSimFilePath ) ) if useCloudStorage else pickle.load(open(InSimFilePath, 'rb'))
+
             def multiple_simulations(params, i):
 
                 # copy the parameters
                 parameters = copy.deepcopy(params)
 
                 # load the previous simulation results
-                data = pickle.load(open(InSimFilePath, 'rb'))[i]
+                data = pickleData[i]
 
                 # extract the previous simulation output
                 keys = ['si', 'worms', 'freeLiving', 'demography', 'contactAgeGroupIndices', 'treatmentAgeGroupIndices']
