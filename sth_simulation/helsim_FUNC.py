@@ -767,6 +767,47 @@ def getAgeCatSampledPrevByVillage(SD, t, ageBand, params, nSamples=1, Unfertiliz
 
     return np.sum(countData['meanEggCountSample'] > 0.9) / countData['villageSampleSize']
 
+def getMediumHeavyPrevalenceByVillage(SD, t, ageBand, eggCountThreshold, params, nSamples=1, Unfertilized=True,
+                                      hostSampleSizeFrac=1.0):
+
+    '''
+    This function calculates the prevalence by village.
+
+    Parameters
+    ----------
+    SD: dict
+        dictionary containing the equilibrium parameter values;
+
+    t: int
+        time step;
+
+    ageBand: int
+        array with age group boundaries;
+
+    eggCountThreshold: float
+        intensity threshold;
+
+    params: dict
+        dictionary containing the parameter names and values;
+
+    nSamples: int
+        number of samples;
+
+    Unfertilized: bool
+        True / False flag for whether unfertilized worms generate eggs;
+
+    hostSampleSizeFrac: float;
+        host sample size fraction;
+
+    Returns
+    -------
+    prevalence by village;
+    '''
+
+    countData = getWormCountsByVillage(SD, t, ageBand, params, nSamples, Unfertilized, hostSampleSizeFrac)
+
+    return np.sum(countData['meanEggCountSample'] >= eggCountThreshold) / countData['villageSampleSize']
+
 def doEvents(rates, SD, dt):
 
     '''
@@ -877,7 +918,8 @@ def doRealization(params, seed):
     nextStep = np.min([nextOutTime, t + maxStep, nextAgeTime, nextChemoTime])
 
     # initialise empty list to store results
-    prevalence = []
+    prevKKSAC = []
+    prevMHISAC = []
 
     # counter for chemotherapy treatments
     mdaRound = 0
@@ -927,7 +969,8 @@ def doRealization(params, seed):
             # output
             if timeBarrier > nextOutTime:
 
-                prevalence.append(getAgeCatSampledPrevByVillage(simData, t, np.array([5, 14]), params))
+                prevKKSAC.append(getAgeCatSampledPrevByVillage(simData, t, np.array([5, 14]), params))
+                prevMHISAC.append(getMediumHeavyPrevalenceByVillage(simData, t, np.array([5, 14]), params['moderateIntensityCount'], params))
 
                 outTimes[nextOutIndex] = maxTime + 10
                 nextOutIndex = np.argmin(outTimes)
@@ -950,7 +993,8 @@ def doRealization(params, seed):
     simData['outTimings'] = params['outTimings']
 
     # save the simulated prevalence
-    simData['prevKKSAC'] = prevalence
+    simData['prevKKSAC'] = prevKKSAC
+    simData['prevMHISAC'] = prevMHISAC
 
     return simData
 
@@ -1018,7 +1062,8 @@ def addRealization(params, simData, times, state):
     nextStep = copy.deepcopy(times['nextStep'])
 
     # initialise empty list to store results
-    prevalence = []
+    prevKKSAC = []
+    prevMHISAC = []
 
     # counter for chemotherapy treatments
     mdaRound = 0
@@ -1069,7 +1114,8 @@ def addRealization(params, simData, times, state):
             # output
             if timeBarrier > nextOutTime:
 
-                prevalence.append(getAgeCatSampledPrevByVillage(simData, t, np.array([5, 14]), params))
+                prevKKSAC.append(getAgeCatSampledPrevByVillage(simData, t, np.array([5, 14]), params))
+                prevMHISAC.append(getMediumHeavyPrevalenceByVillage(simData, t, np.array([5, 14]), params['moderateIntensityCount'], params))
 
                 outTimes[nextOutIndex] = maxTime + 10
                 nextOutIndex = np.argmin(outTimes)
@@ -1092,6 +1138,7 @@ def addRealization(params, simData, times, state):
     simData['outTimings'] = params['outTimings']
 
     # save the simulated prevalence
-    simData['prevKKSAC'] = prevalence
+    simData['prevKKSAC'] = prevKKSAC
+    simData['prevMHISAC'] = prevMHISAC
 
     return simData

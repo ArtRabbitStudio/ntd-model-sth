@@ -24,7 +24,8 @@ def test_1a():
     STH_Simulation(paramFileName='AscarisParameters_moderate.txt',
                    demogName='KenyaKDHS',
                    MDAFilePath='files/Input_MDA_23Oct20.csv',
-                   PrevFilePath='files/OutputPrev_STH_test_1a.csv',
+                   prevKKSACFilePath='files/OutputPrevKKSAC_STH_test_1a.csv',
+                   prevMHISACFilePath='files/OutputPrevMHISAC_STH_test_1a.csv',
                    RkFilePath='files/InputRk_STH.csv',
                    nYears=7,
                    outputFrequency=12,
@@ -32,7 +33,7 @@ def test_1a():
                    SaveOutput=False,
                    OutSimFilePath=None,
                    InSimFilePath=None)
-    print("results in files/OutputPrev_STH_test_1a.csv")
+    print("results in files/OutputPrevKKSAC_STH_test_1a.csv and files/OutputPrevMHISAC_STH_test_1a.csv")
 
 @timer
 def test_1b():
@@ -40,7 +41,8 @@ def test_1b():
     STH_Simulation(paramFileName='AscarisParameters_moderate.txt',
                    demogName='KenyaKDHS',
                    MDAFilePath='files/Input_MDA_23Oct20.csv',
-                   PrevFilePath='files/OutputPrev_STH_test_1b.csv',
+                   prevKKSACFilePath='files/OutputPrevKKSAC_STH_test_1b.csv',
+                   prevMHISACFilePath='files/OutputPrevMHISAC_STH_test_1b.csv',
                    RkFilePath='files/InputRk_STH.csv',
                    nYears=7,
                    outputFrequency=12,
@@ -48,7 +50,7 @@ def test_1b():
                    SaveOutput=False,
                    OutSimFilePath=None,
                    InSimFilePath=None)
-    print("results in files/OutputPrev_STH_test_1b.csv")
+    print("results in files/OutputPrevKKSAC_STH_test_1b.csv and files/OutputPrevMHISAC_STH_test_1b.csv")
 
 @timer
 def test_2a():
@@ -56,7 +58,8 @@ def test_2a():
     STH_Simulation(paramFileName='AscarisParameters_moderate.txt',
                    demogName='KenyaKDHS',
                    MDAFilePath='files/Input_MDA_23Oct20_part1.csv',
-                   PrevFilePath='files/OutputPrev_STH_test_2a.csv',
+                   prevKKSACFilePath='files/OutputPrevKKSAC_STH_test_2a.csv',
+                   prevMHISACFilePath='files/OutputPrevMHISAC_STH_test_2a.csv',
                    RkFilePath='files/InputRk_STH.csv',
                    nYears=2,
                    outputFrequency=12,
@@ -64,7 +67,7 @@ def test_2a():
                    SaveOutput=True,
                    OutSimFilePath='files/Output_STH_test_2a.p',
                    InSimFilePath=None)
-    print("results in files/OutputPrev_STH_test_2a.csv")
+    print("results in files/OutputPrevKKSAC_STH_test_2a.csv and files/OutputPrevMHISAC_STH_test_2a.csv")
 
 @timer
 def test_2b():
@@ -72,7 +75,8 @@ def test_2b():
     STH_Simulation(paramFileName='AscarisParameters_moderate.txt',
                    demogName='KenyaKDHS',
                    MDAFilePath='files/Input_MDA_23Oct20_part2.csv',
-                   PrevFilePath='files/OutputPrev_STH_test_2b.csv',
+                   prevKKSACFilePath='files/OutputPrevKKSAC_STH_test_2b.csv',
+                   prevMHISACFilePath='files/OutputPrevMHISAC_STH_test_2b.csv',
                    RkFilePath='files/InputRk_STH.csv',
                    nYears=5,
                    outputFrequency=12,
@@ -80,4 +84,4 @@ def test_2b():
                    SaveOutput=False,
                    OutSimFilePath=None,
                    InSimFilePath='files/Output_STH_test_2a.p')
-    print("results in files/OutputPrev_STH_test_2b.csv")
+    print("results in files/OutputPrevKKSAC_STH_test_2b.csv and files/OutputPrevMHISAC_STH_test_2b.csv")
