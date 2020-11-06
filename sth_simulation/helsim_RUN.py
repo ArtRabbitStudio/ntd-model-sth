@@ -241,7 +241,7 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, prevKKSACFilePath=None
 
             df.to_csv(prevKKSACFilePath, index=None)
 
-        if prevMHISACFilePath is not None:  # save the simulated prevKKSAC in a CSV file
+        if prevMHISACFilePath is not None:  # save the simulated prevMHISAC in a CSV file
 
             years = out[0]['outTimings'][:len(out[0]['prevMHISAC'])]
             years = [str(np.int(np.round(year))) if outputFrequency == 1 else str(np.round(year, 2)) for year in years]
