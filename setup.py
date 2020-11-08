@@ -10,6 +10,6 @@ setuptools.setup(
     long_description='Individual-based model in Medley 1989 thesis and Anderson & Medley 1985.',
     packages=setuptools.find_packages(),
     python_requires='>=3.6',
-    install_requires=['numpy', 'pandas', 'joblib', 'flask', 'google-cloud-storage'],
+    install_requires=['numpy', 'pandas', 'joblib', 'flask', 'flask_cors', 'google-cloud-storage', 'gcsfs', 'fsspec'],
     include_package_data=True
 )
