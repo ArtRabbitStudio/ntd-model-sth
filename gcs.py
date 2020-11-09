@@ -17,3 +17,7 @@ def blob_exists( gcs_path ):
     print( f"found it? {found}" )
     return found
 
+def write_string_to_file( string, gcs_path ):
+    print( f"writing to {gcs_path}" )
+    blob = bucket.blob( gcs_path )
+    blob.upload_from_string( string )
