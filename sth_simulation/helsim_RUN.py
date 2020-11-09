@@ -226,7 +226,7 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevFilePath, RkFilePa
 
         # save the simulated prevalence in a CSV file
         years = out[0]['outTimings'][:len(out[0]['prevKKSAC'])]
-        years = [str(np.int(np.round(year))) if outputFrequency == 1 else str(np.round(year, 2)) for year in years]
+        years = [str(np.int(np.round(year))) if outputFrequency == 1 else str(np.round(year, 4)) for year in years]
         columns = ['Random Generator', 'R0', 'k'] + ['prevKKSAC year ' + year for year in years]
 
         df = pd.DataFrame(columns=columns)
