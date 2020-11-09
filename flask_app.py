@@ -36,16 +36,21 @@ def run():
     request_data_str = str( request.data, 'UTF-8' )
     request_hash = hashlib.sha256( request_data_str.encode( 'UTF-8' ) ).hexdigest()[ 0:24 ]
 
+
+    # whip out necessary vars
     iu = request.json[ 'iu' ]
     country = iu[ 0:3 ]
     iu_id = iu[ 3: ]
     column_names = request.json[ 'mdaData' ][ 0 ]
     mda_data = request.json[ 'mdaData' ][ 1: ]
+    numReps = 200 if request.json[ 'runs' ] > 200 else request.json[ 'runs' ]
 
     disease = request.json[ 'disease' ]
     paramFileName = parameter_file_names[ disease ]
     file_abbrev = file_name_disease_abbreviations[ disease ]
 
+
+    # set up all the file paths
     source_data_path_root = f"diseases/{disease}/source-data"
     source_data_gcs_path_root = f"/{bucket_name}/{source_data_path_root}"
 
@@ -89,6 +94,8 @@ def run():
         'historicalSummaryUrl': HttpsHistoricalPrevSummaryFilePath
     }
 
+
+    # convert the incoming scenario mdaData to a CSV and write it to GCS
     try:
 
         pandas.DataFrame(
@@ -106,9 +113,11 @@ def run():
             'msg': str( e )
         } )
 
-    # run the simulation, if its output hasn't already been written to cloud storage
+
+    # run the scenario, if its output hasn't already been written to cloud storage
     if not blob_exists( PrevBlobPath ):
 
+        # we're about to kick off a new simulation
         Result[ 'isNewSimulation' ] = True
 
         STH_Simulation(
@@ -119,14 +128,14 @@ def run():
             RkFilePath = GcsRkFilePath,
             nYears = 10,
             outputFrequency = 6, # restrict the number of columns in the CSV output
-            numReps = None,
+            numReps = numReps,
             SaveOutput = False,
             OutSimFilePath = None,
             InSimFilePath = InSimFilePath,
             useCloudStorage = True
         )
 
-        print( "writing future summary to", GcsPrevSummaryFilePath )
+        # summarize generated future prevalence data (predictions)
         future_prevalence = pandas.read_csv( GcsPrevFilePath )
         future_summary = pandas.DataFrame( {
             'median': future_prevalence.iloc[:, 2:].median(),
@@ -135,7 +144,7 @@ def run():
         }).to_json()
         write_string_to_file( future_summary, GcsPrevSummaryFilePath )
 
-        print( "writing historical summary to", GcsHistoricalPrevSummaryFilePath )
+        # summarize historica prevalence data
         historical_prevalence = pandas.read_csv( GcsHistoricalPrevFilePath )
         historical_summary = pandas.DataFrame( {
             'median': historical_prevalence.iloc[:, 2:].median(),
@@ -144,18 +153,26 @@ def run():
         }).to_json()
         write_string_to_file( historical_summary, GcsHistoricalPrevSummaryFilePath )
 
+
     try:
+
+        # snag the output for sending to browser now
         output_result_json = json.dumps( Result )
 
         # save result to file for JS to hit next time
         ResultJsonFilePath = f"{OutputDirectoryPath}/{file_abbrev}-{iu}-{request_hash}-info.json"
-        Result[ 'isNewSimulation' ] = False
+        Result[ 'isNewSimulation' ] = False # because reading from static file means it's not new
         write_string_to_file( json.dumps( Result ), ResultJsonFilePath )
 
         return Response( output_result_json, mimetype = 'application/json; charset=UTF-8' )
 
     except Exception as e:
-        return str( e )
+
+        return json.dumps( {
+            'status': False,
+            'msg': str( e )
+        } )
+
 
 if __name__ == '__main__':
     app.run( debug = False, host = '0.0.0.0' )

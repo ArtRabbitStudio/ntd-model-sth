@@ -216,7 +216,8 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevFilePath, RkFilePa
 
         # run the simulations
         num_cores = multiprocessing.cpu_count()
-        print( f"Running STH_Simulation on {num_cores} core(s)" )
+        num_reps = params[ 'numReps' ]
+        print( f"Starting {num_reps} x STH_Simulation runs on {num_cores} core(s)" )
 
         start_time = time.time()
 
