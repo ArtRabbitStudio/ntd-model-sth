@@ -126,7 +126,7 @@ def run():
             MDAFilePath = GcsMDAFilePath,
             PrevFilePath = GcsPrevFilePath,
             RkFilePath = GcsRkFilePath,
-            nYears = 10,
+            nYears = 12,
             outputFrequency = 6, # restrict the number of columns in the CSV output
             numReps = numReps,
             SaveOutput = False,

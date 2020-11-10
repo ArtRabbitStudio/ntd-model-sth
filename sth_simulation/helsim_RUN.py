@@ -217,7 +217,8 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevFilePath, RkFilePa
         # run the simulations
         num_cores = multiprocessing.cpu_count()
         num_reps = params[ 'numReps' ]
-        print( f"Starting {num_reps} x STH_Simulation runs on {num_cores} core(s)" )
+        num_years = params[ 'maxTime' ]
+        print( f"Starting {num_reps}x STH_Simulation runs over {num_years} years (nYears={nYears}) on {num_cores} core(s)" )
 
         start_time = time.time()
 
