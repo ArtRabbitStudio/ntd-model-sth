@@ -17,13 +17,13 @@ The `STH_Simulation()` function requires the following inputs:
         MDA times and with the respective coverage
         fractions for each age group.
 
-    prevKKSACFilePath: str
+    PrevKKSACFilePath: str
         This is the path where the output CSV file with
-        the simulated prevKKSAC will be saved.
+        the simulated PrevKKSAC will be saved.
 
-    prevMHISACFilePath: str
+    PrevMHISACFilePath: str
         This is the path where the output CSV file with
-        the simulated prevMHISAC will be saved.
+        the simulated PrevMHISAC will be saved.
 
     RkFilePath: str
         This is the path to the input CSV file with the
