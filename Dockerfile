@@ -19,7 +19,6 @@ COPY Pipfile Pipfile
 COPY flask_app.py flask_app.py
 COPY gcs.py gcs.py
 COPY setup.py setup.py
-COPY files/Asc_22609/ files/Asc_22609/
 RUN ls -l
 
 # install the STH code

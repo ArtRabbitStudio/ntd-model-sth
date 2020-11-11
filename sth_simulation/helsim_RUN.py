@@ -23,9 +23,9 @@ def timer(func):
     return wrapper_timer
 
 @timer
-def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevFilePath, RkFilePath=None, nYears=None,
-                   outputFrequency=None, numReps=None, SaveOutput=False, OutSimFilePath=None, InSimFilePath=None,
-                   useCloudStorage=False):
+def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevKKSACFilePath=None, PrevMHISACFilePath=None,
+                   RkFilePath=None, nYears=None, outputFrequency=None, numReps=None, SaveOutput=False,
+                   OutSimFilePath=None, InSimFilePath=None, useCloudStorage=False):
 
     '''
     Longitudinal simulations.
@@ -45,9 +45,13 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevFilePath, RkFilePa
         MDA times and with the respective coverage
         fractions for each age group.
 
-    PrevFilePath: str
+    PrevKKSACFilePath: str
         This is the path where the output CSV file with
-        the simulated prevalence will be saved.
+        the simulated prevKKSAC will be saved.
+
+    PrevMHISACFilePath: str
+        This is the path where the output CSV file with
+        the simulated prevMHISAC will be saved.
 
     RkFilePath: str
         This is the path to the input CSV file with the
@@ -92,7 +96,10 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevFilePath, RkFilePa
     '''
 
     # make sure that the user has provided all the necessary inputs
-    if '.csv' not in PrevFilePath:
+    if PrevKKSACFilePath is not None and '.csv' not in PrevKKSACFilePath:
+        message = 'Please provide the directory to the output CSV file with the simulated prevalence.'
+
+    elif PrevMHISACFilePath is not None and '.csv' not in PrevMHISACFilePath:
         message = 'Please provide the directory to the output CSV file with the simulated prevalence.'
 
     elif RkFilePath is not None and '.csv' not in RkFilePath:
@@ -126,9 +133,8 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevFilePath, RkFilePa
         if nYears is not None:
             params['maxTime'] = nYears
 
-        if RkFilePath is not None:
+        if RkFilePath is not None: # load the simulation parameters from the CSV file
 
-            # load the simulation parameters from the CSV file
             simparams = pd.read_csv(RkFilePath)
             simparams.columns = [s.replace(' ', '') for s in simparams.columns]
 
@@ -218,7 +224,7 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevFilePath, RkFilePa
         num_cores = multiprocessing.cpu_count()
         num_reps = params[ 'numReps' ]
         num_years = params[ 'maxTime' ]
-        print( f"Starting {num_reps}x STH_Simulation runs over {num_years} years (nYears={nYears}) on {num_cores} core(s), v20201110130326" )
+        print( f"Starting {num_reps}x STH_Simulation runs over {num_years} years (nYears={nYears}) on {num_cores} core(s), v20201111161129" )
 
         start_time = time.time()
 
@@ -226,20 +232,37 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevFilePath, RkFilePa
 
         end_time = time.time()
 
-        # save the simulated prevalence in a CSV file
-        years = out[0]['outTimings'][:len(out[0]['prevKKSAC'])]
-        years = [str(np.int(np.round(year))) if outputFrequency == 1 else str(np.round(year, 4)) for year in years]
-        columns = ['Random Generator', 'R0', 'k'] + ['prevKKSAC year ' + year for year in years]
+        if PrevKKSACFilePath is not None:  # save the simulated prevKKSAC in a CSV file
 
-        df = pd.DataFrame(columns=columns)
-        df['Random Generator'] = seed
-        df['R0'] = R0
-        df['k'] = k
+            years = out[0]['outTimings'][:len(out[0]['prevKKSAC'])]
+            years = [str(np.int(np.round(year))) if outputFrequency == 1 else str(np.round(year, 2)) for year in years]
+            columns = ['Random Generator', 'R0', 'k'] + ['prevKKSAC year ' + year for year in years]
 
-        for i in range(len(out)):
-            df.iloc[i, 3:] = out[i]['prevKKSAC']
+            df = pd.DataFrame(columns=columns)
+            df['Random Generator'] = seed
+            df['R0'] = R0
+            df['k'] = k
 
-        df.to_csv(PrevFilePath, index=None)
+            for i in range(len(out)):
+                df.iloc[i, 3:] = out[i]['prevKKSAC']
+
+            df.to_csv(PrevKKSACFilePath, index=None)
+
+        if PrevMHISACFilePath is not None:  # save the simulated prevMHISAC in a CSV file
+
+            years = out[0]['outTimings'][:len(out[0]['prevMHISAC'])]
+            years = [str(np.int(np.round(year))) if outputFrequency == 1 else str(np.round(year, 2)) for year in years]
+            columns = ['Random Generator', 'R0', 'k'] + ['prevMHISAC year ' + year for year in years]
+
+            df = pd.DataFrame(columns=columns)
+            df['Random Generator'] = seed
+            df['R0'] = R0
+            df['k'] = k
+
+            for i in range(len(out)):
+                df.iloc[i, 3:] = out[i]['prevMHISAC']
+
+            df.to_csv(PrevMHISACFilePath, index=None)
 
         # save the simulated data in a pickle file
         if SaveOutput:
