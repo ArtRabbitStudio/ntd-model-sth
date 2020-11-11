@@ -61,6 +61,11 @@ The `STH_Simulation()` function requires the following inputs:
         previous simulations from this state. If this is
         not provided, the code will start new simulations
         from scratch.
+
+    useCloudStorage: bool
+        Indicates whether the model should treat incoming
+        paths as GCS gs:// urls (True) or filesystem paths
+        (False). 
         
 Some examples are included in the Jupyter notebook `sth_tests.ipynb` in the `tests` folder.
 
