@@ -165,7 +165,11 @@ def run():
 
 
     # run the scenario, if its output hasn't already been written to cloud storage
-    if ( not blob_exists( PrevKKSACBlobPath ) ) or not ( blob_exists( PrevMHISACBlobPath ) ):
+    if (
+        ( not ( blob_exists( PrevKKSACBlobPath ) ) )
+        or
+        ( not ( blob_exists( PrevMHISACBlobPath ) ) )
+    ):
 
         # we're about to kick off a new simulation
         Result[ 'isNewSimulation' ] = True
