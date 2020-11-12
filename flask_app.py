@@ -1,6 +1,7 @@
 import json
 import pandas
 import hashlib
+import logging
 
 from gcs import blob_exists, write_string_to_file
 from datetime import datetime
@@ -39,6 +40,15 @@ def generate_summary( InCSVPath, OutJsonPath ):
 app = Flask(__name__)
 cors = CORS( app, resources = { r"/run": { "origins": "*" } } ) # TODO FIXME to right origin
 app.config[ 'CORS_HEADERS' ] = 'content-type'
+
+# logging
+app.logger.setLevel( logging.INFO )
+
+# gunicorn logging if run there under WSGI
+if __name__ != '__main__':
+    gunicorn_logger = logging.getLogger( 'gunicorn.error' )
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel( gunicorn_logger.level )
 
 # routes
 @app.route('/')
@@ -187,7 +197,8 @@ def run():
             SaveOutput = False,
             OutSimFilePath = None,
             InSimFilePath = InSimFilePath,
-            useCloudStorage = True
+            useCloudStorage = True,
+            logger = app.logger
         )
 
         # summarize generated future KKSAC prevalence data (predictions)

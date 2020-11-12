@@ -10,6 +10,7 @@ RUN pip3 install flask_cors
 RUN pip3 install google-cloud-storage
 RUN pip3 install fsspec
 RUN pip3 install gcsfs
+RUN pip3 install gunicorn
 
 # put the app together
 RUN mkdir -p /app
@@ -18,6 +19,7 @@ COPY sth_simulation sth_simulation
 COPY Pipfile Pipfile
 COPY flask_app.py flask_app.py
 COPY gcs.py gcs.py
+COPY wsgi.py wsgi.py
 COPY setup.py setup.py
 RUN ls -l
 
@@ -27,5 +29,5 @@ RUN pip3 install .
 # port
 EXPOSE 5000
 
-ENTRYPOINT [ "/usr/local/bin/python" ]
-CMD [ "flask_app.py" ]
+# run the app in gunicorn via WSGI on port 5000
+CMD gunicorn --workers 1 --timeout 600 --bind 0.0.0.0:5000 wsgi

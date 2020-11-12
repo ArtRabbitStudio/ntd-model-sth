@@ -1,6 +1,7 @@
 import multiprocessing
 import pickle
 import time
+import uuid
 import functools
 import datetime
 import gcs
@@ -13,19 +14,23 @@ def timer(func):
     """Print the runtime of the decorated function"""
     @functools.wraps(func)
     def wrapper_timer(*args, **kwargs):
+        run_uuid = uuid.uuid4()
         start_time = time.perf_counter()    # 1
-        print(f"-> Running {func.__name__!r}, starting at {datetime.datetime.now()}")
+        print_function = kwargs[ 'logger' ].info if kwargs[ 'logger' ] is not None else print
+        print_function(f"Timer {run_uuid} running {func.__name__!r}, starting at {datetime.datetime.now()}")
         value = func(*args, **kwargs)
         end_time = time.perf_counter()      # 2
         run_time = end_time - start_time    # 3
-        print(f"=> Finished {func.__name__!r} in {run_time:.4f} secs")
+        print_function(f"Timer {run_uuid} finished {func.__name__!r} in {run_time:.4f} secs")
         return value
     return wrapper_timer
 
 @timer
 def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevKKSACFilePath=None, PrevMHISACFilePath=None,
                    RkFilePath=None, nYears=None, outputFrequency=None, numReps=None, SaveOutput=False,
-                   OutSimFilePath=None, InSimFilePath=None, useCloudStorage=False):
+                   OutSimFilePath=None, InSimFilePath=None, useCloudStorage=False, logger=None):
+
+    print_function = logger.info if logger is not None else print
 
     '''
     Longitudinal simulations.
@@ -224,7 +229,7 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevKKSACFilePath=None
         num_cores = multiprocessing.cpu_count()
         num_reps = params[ 'numReps' ]
         num_years = params[ 'maxTime' ]
-        print( f"Starting {num_reps}x STH_Simulation runs over {num_years} years (nYears={nYears}) on {num_cores} core(s), v20201111161129" )
+        print_function( f"Starting {num_reps}x STH_Simulation runs over {num_years} years (nYears={nYears}) on {num_cores} core(s), v20201112114948" )
 
         start_time = time.time()
 
@@ -270,6 +275,6 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevKKSACFilePath=None
 
         message = 'Running time: ' + format((end_time - start_time), '.0f') + ' seconds.'
 
-    print(message)
+    print_function( message )
 
     return None
