@@ -5,6 +5,7 @@ import uuid
 import functools
 import datetime
 import gcs
+import re
 
 from joblib import Parallel, delayed
 
@@ -229,7 +230,8 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevKKSACFilePath=None
         num_cores = multiprocessing.cpu_count()
         num_reps = params[ 'numReps' ]
         num_years = params[ 'maxTime' ]
-        print_function( f"Starting {num_reps}x STH_Simulation runs over {num_years} years (nYears={nYears}) on {num_cores} core(s), v20201112114948" )
+        variant = re.search( '(.*)(?=Parameters)', paramFileName ).group()
+        print_function( f"Starting {num_reps}x STH/{variant} runs over {num_years} years (nYears={nYears}) on {num_cores} core(s), v20201112114948" )
 
         start_time = time.time()
 

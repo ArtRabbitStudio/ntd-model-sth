@@ -16,11 +16,13 @@ gs_prefix = "gs:/"
 https_prefix = "https://storage.googleapis.com"
 
 parameter_file_names = {
-    'sth-roundworm': "AscarisParameters_moderate.txt"
+    'sth-roundworm': "AscarisParameters_moderate.txt",
+    'sth-whipworm': "TrichurisParameters_moderate.txt"
 }
 
 file_name_disease_abbreviations = {
-    'sth-roundworm': "Asc"
+    'sth-roundworm': "Asc",
+    'sth-whipworm': "Tri"
 }
 
 ''' UTILITY FUNCTIONS '''
@@ -65,16 +67,34 @@ def run():
 
 
     # snag necessary vars
-    iu = request.json[ 'iu' ]
-    country = iu[ 0:3 ]
-    iu_id = iu[ 3: ]
-    column_names = request.json[ 'mdaData' ][ 0 ]
-    mda_data = request.json[ 'mdaData' ][ 1: ]
-    numReps = 200 if request.json[ 'runs' ] > 200 else request.json[ 'runs' ]
+    for key in [ 'disease', 'iu', 'mdaData', 'runs' ]:
+        if not key in request.json:
+            abort( 400 )
 
     disease = request.json[ 'disease' ]
-    paramFileName = parameter_file_names[ disease ]
-    file_abbrev = file_name_disease_abbreviations[ disease ]
+
+    if not disease in parameter_file_names or not disease in file_name_disease_abbreviations:
+        abort( 400 )
+
+    try:
+
+        iu = request.json[ 'iu' ]
+        country = iu[ 0:3 ]
+        iu_id = iu[ 3: ]
+        column_names = request.json[ 'mdaData' ][ 0 ]
+        mda_data = request.json[ 'mdaData' ][ 1: ]
+        numReps = 200 if request.json[ 'runs' ] > 200 else request.json[ 'runs' ]
+
+        paramFileName = parameter_file_names[ disease ]
+        file_abbrev = file_name_disease_abbreviations[ disease ]
+
+    except Exception as e:
+
+        return json.dumps( {
+            'status': False,
+            'msg': str( e )
+        } )
+
 
 
     # set up all the file paths
