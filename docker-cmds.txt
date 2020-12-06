@@ -1,0 +1,10 @@
+# make an image from current status using latest commit ID
+GIT_HASH=$( /usr/local/bin/git --no-pager log --pretty=oneline | head -1 | cut -f 1 -d ' ' )
+docker build -f Dockerfile -t gcr.io/artrabbit-clients-ntd/sth-app:${GIT_HASH} .
+
+# test locally
+docker run -p 5000:5000 -e GOOGLE_APPLICATION_CREDENTIALS=/app/artrabbit-clients-ntd-local-dev-service-account-key.json -v ${PWD}/artrabbit-clients-ntd-local-dev-service-account-key.json:/app/artrabbit-clients-ntd-local-dev-service-account-key.json gcr.io/artrabbit-clients-ntd/sth-app:${GIT_HASH}
+
+# tag & push to GCR.io
+docker tag gcr.io/artrabbit-clients-ntd/sth-app:${GIT_HASH} gcr.io/artrabbit-clients-ntd/sth-app:latest
+docker push gcr.io/artrabbit-clients-ntd/sth-app:latest
