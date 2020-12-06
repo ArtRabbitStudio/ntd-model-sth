@@ -17,12 +17,14 @@ https_prefix = "https://storage.googleapis.com"
 
 parameter_file_names = {
     'sth-roundworm': "AscarisParameters_moderate.txt",
-    'sth-whipworm': "TrichurisParameters_moderate.txt"
+    'sth-whipworm': "TrichurisParameters_moderate.txt",
+    'sth-hookwork': "HookwormParameters_moderate.txt"
 }
 
 file_name_disease_abbreviations = {
     'sth-roundworm': "Asc",
-    'sth-whipworm': "Tri"
+    'sth-whipworm': "Tri",
+    'sth-hookworm': "Hook"
 }
 
 ''' UTILITY FUNCTIONS '''
