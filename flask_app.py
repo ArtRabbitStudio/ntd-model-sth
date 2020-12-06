@@ -5,7 +5,7 @@ import logging
 
 from gcs import blob_exists, write_string_to_file
 from datetime import datetime
-from flask import Flask, Response, request
+from flask import Flask, Response, request, abort
 from flask_cors import CORS, cross_origin
 from sth_simulation.helsim_RUN import STH_Simulation
 
@@ -18,7 +18,7 @@ https_prefix = "https://storage.googleapis.com"
 parameter_file_names = {
     'sth-roundworm': "AscarisParameters_moderate.txt",
     'sth-whipworm': "TrichurisParameters_moderate.txt",
-    'sth-hookwork': "HookwormParameters_moderate.txt"
+    'sth-hookworm': "HookwormParameters_moderate.txt"
 }
 
 file_name_disease_abbreviations = {
