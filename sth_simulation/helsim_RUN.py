@@ -231,7 +231,7 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevKKSACFilePath=None
         num_reps = params[ 'numReps' ]
         num_years = params[ 'maxTime' ]
         variant = re.search( '(.*)(?=Parameters)', paramFileName ).group()
-        print_function( f"Starting {num_reps}x STH/{variant} runs over {num_years} years (nYears={nYears}) on {num_cores} core(s), v20201206120932" )
+        print_function( f"Starting {num_reps}x STH/{variant} runs over {num_years} years (nYears={nYears}) on {num_cores} core(s), v20201206124647" )
 
         start_time = time.time()
 
