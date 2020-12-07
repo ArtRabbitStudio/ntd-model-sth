@@ -205,13 +205,9 @@ def run():
         ( not ( blob_exists( PrevMHISACBlobPath ) ) )
     ):
 
-        # SCH has slightly different parameters
-        if disease[:3] == "sch":
-            nYears = 18
-            outputFrequency = 1
-        else:
-            nYears = 12
-            outputFrequency = 6
+        # all SCH & STH models have same nYears & outputFrequency
+        nYears = 12
+        outputFrequency = 6
 
         # we're about to kick off a new simulation
         Result[ 'isNewSimulation' ] = True
