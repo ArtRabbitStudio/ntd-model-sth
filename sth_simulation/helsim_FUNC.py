@@ -45,6 +45,11 @@ def setIntensityCount(paramFileName):
         moderateIntensityCount = 2000 / 24
         highIntensityCount = 4000 / 24
 
+    elif paramFileName == 'SCH_MansoniParameters.txt' or paramFileName == 'SCH_HaematobiumParameters.txt':
+
+        moderateIntensityCount = 100 / 24
+        highIntensityCount = 400 / 24
+
     return moderateIntensityCount, highIntensityCount
 
 def readParam(fileName):

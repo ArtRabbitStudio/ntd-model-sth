@@ -18,13 +18,15 @@ https_prefix = "https://storage.googleapis.com"
 parameter_file_names = {
     'sth-roundworm': "AscarisParameters_moderate.txt",
     'sth-whipworm': "TrichurisParameters_moderate.txt",
-    'sth-hookworm': "HookwormParameters_moderate.txt"
+    'sth-hookworm': "HookwormParameters_moderate.txt",
+    'sch-mansoni': "SCH_MansoniParameters.txt"
 }
 
 file_name_disease_abbreviations = {
     'sth-roundworm': "Asc",
     'sth-whipworm': "Tri",
-    'sth-hookworm': "Hook"
+    'sth-hookworm': "Hook",
+    'sch-mansoni': "Man"
 }
 
 ''' UTILITY FUNCTIONS '''
@@ -203,6 +205,14 @@ def run():
         ( not ( blob_exists( PrevMHISACBlobPath ) ) )
     ):
 
+        # SCH has slightly different parameters
+        if disease[:3] == "sch":
+            nYears = 18
+            outputFrequency = 1
+        else:
+            nYears = 12
+            outputFrequency = 6
+
         # we're about to kick off a new simulation
         Result[ 'isNewSimulation' ] = True
 
@@ -213,8 +223,8 @@ def run():
             PrevKKSACFilePath = GcsPrevKKSACFilePath,
             PrevMHISACFilePath = GcsPrevMHISACFilePath,
             RkFilePath = GcsRkFilePath,
-            nYears = 12,
-            outputFrequency = 6, # restrict the number of columns in the CSV output
+            nYears = nYears,
+            outputFrequency = outputFrequency, # restrict the number of columns in the CSV output
             numReps = numReps,
             SaveOutput = False,
             OutSimFilePath = None,
