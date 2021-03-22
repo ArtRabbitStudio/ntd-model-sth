@@ -16,7 +16,7 @@ rhoValues	0.3 1.28 1 0.17		Rho, contribution to the reservoir by contact age gro
 
 ### Epidemiological parameters. 
 k	0.12			Shape parameter of assumed negative binomial distribution of worms amongst host 
-lambda	185.0	Eggs per gram (lambda)
+lambda	5.875	Eggs per gram (lambda)
 R0	1.5	Basic reproductive number (R0)   ## 1.5 for moderate prevalence, 9.5 for high prevalence
 ReservoirDecayRate	18.25	Reservoir decay rate (decay rate of eggs in the environment)
 sigma	1		Worm death rate (sigma) i.e. 1/worm_life_span, same for all development stages

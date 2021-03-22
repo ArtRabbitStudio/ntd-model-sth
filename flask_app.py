@@ -102,10 +102,10 @@ def run():
 
 
     # set up all the file paths
-    source_data_path_root = f"diseases/{disease}/source-data"
+    source_data_path_root = f"diseases/{disease}/source-data-20210322a"
     source_data_gcs_path_root = f"/{bucket_name}/{source_data_path_root}"
 
-    output_data_path_root = f"diseases/{disease}/data"
+    output_data_path_root = f"diseases/{disease}/data-20210322a"
     output_data_gcs_path_root = f"/{bucket_name}/{output_data_path_root}"
 
     OutputDirectoryPath = f"{output_data_path_root}/{country}/{iu}/{request_hash}"
