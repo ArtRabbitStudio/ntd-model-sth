@@ -75,13 +75,16 @@ def root():
 @cross_origin( origin = "*", headers = [ 'content-type' ] )
 def run():
 
+    print_function = app.logger.info if app.logger is not None else print
+
     # read in configuration from POST
     request_data_str = str( request.data, 'UTF-8' )
     request_hash = hashlib.sha256( request_data_str.encode( 'UTF-8' ) ).hexdigest()[ 0:24 ]
 
     # snag necessary vars
-    for key in [ 'disease', 'iu', 'mdaData', 'runs' ]:
+    for key in [ 'disease', 'iu', 'runs' ]:
         if not key in request.json:
+            print_function( f"request data is missing key: {key}" )
             abort( 400 )
 
     disease = request.json[ 'disease' ]
@@ -89,7 +92,12 @@ def run():
     if disease == 'trachoma':
         return run_trachoma( request_hash, request.json )
 
+    if not request.json[ 'mdaData' ]:
+        print_function( f"request data is missing key 'mdaData'" )
+        abort( 400 )
+
     if not disease in parameter_file_names or not disease in file_name_disease_abbreviations:
+        print_function( f"request data specifies unknown disease: {disease}" )
         abort( 400 )
 
     return run_sth( request_hash, request.json )
