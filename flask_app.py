@@ -131,7 +131,7 @@ def run_sth( request_hash, params ):
     ############################################################################
 
     # set up all the file paths
-    source_data_path_root = f"diseases/{disease}/source-data-redesign2021" # TODO FIXME
+    source_data_path_root = f"diseases/{disease}/source-data" if disease == 'sch-mansoni' else f"diseases/{disease}/source-data-redesign2021" # TODO FIXME
     source_data_gcs_path_root = f"/{bucket_name}/{source_data_path_root}"
 
     output_data_path_root = f"diseases/{disease}/output-data"
