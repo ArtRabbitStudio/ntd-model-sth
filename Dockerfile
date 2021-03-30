@@ -22,7 +22,7 @@ COPY gcs.py gcs.py
 COPY wsgi.py wsgi.py
 COPY setup.py setup.py
 RUN ls -l
-RUN grep -vw sys < flask_app.py > removed-sys-flask_app.py && mv -f removed-sys-flask_app.py flask_app.py && grep -w sys flask_app.py
+RUN grep -vw sys < flask_app.py > removed-sys-flask_app.py && mv -f removed-sys-flask_app.py flask_app.py
 
 # install the STH code
 RUN pip3 install .
