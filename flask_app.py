@@ -2,14 +2,19 @@ import json
 import pandas
 import hashlib
 import logging
+import sys
+sys.path.insert( 1, '../ntd-model-trachoma' )
 
-from gcs import blob_exists, write_string_to_file
+from gcs import blob_exists, write_string_to_file, upload_file_to_blob
 from datetime import datetime
 from flask import Flask, Response, request, abort
 from flask_cors import CORS, cross_origin
 from sth_simulation.helsim_RUN import STH_Simulation
+from trachoma.trachoma_simulations import Trachoma_Simulation
 
-''' HERE ARE SOME CONSTANTS FOR FILE & STORAGE PATHS '''
+################################################
+###### CONSTANTS FOR FILE & STORAGE PATHS ######
+################################################
 
 bucket_name = 'ntd-disease-simulator-data'
 gs_prefix = "gs:/"
@@ -26,10 +31,13 @@ file_name_disease_abbreviations = {
     'sth-roundworm': "Asc",
     'sth-whipworm': "Tri",
     'sth-hookworm': "Hook",
-    'sch-mansoni': "Man"
+    'sch-mansoni': "Man",
+    'trachoma': "Trac",
 }
 
-''' UTILITY FUNCTIONS '''
+###############################
+###### UTILITY FUNCTIONS ######
+###############################
 
 def generate_summary( InCSVPath, OutJsonPath ):
     prevalence = pandas.read_csv( InCSVPath )
@@ -40,7 +48,9 @@ def generate_summary( InCSVPath, OutJsonPath ):
     }).to_json()
     write_string_to_file( summary, OutJsonPath )
 
-''' FLASK APP BELOW '''
+#######################
+###### FLASK APP ######
+#######################
 
 # setup
 app = Flask(__name__)
@@ -69,7 +79,6 @@ def run():
     request_data_str = str( request.data, 'UTF-8' )
     request_hash = hashlib.sha256( request_data_str.encode( 'UTF-8' ) ).hexdigest()[ 0:24 ]
 
-
     # snag necessary vars
     for key in [ 'disease', 'iu', 'mdaData', 'runs' ]:
         if not key in request.json:
@@ -77,17 +86,29 @@ def run():
 
     disease = request.json[ 'disease' ]
 
+    if disease == 'trachoma':
+        return run_trachoma( request_hash, request.json )
+
     if not disease in parameter_file_names or not disease in file_name_disease_abbreviations:
         abort( 400 )
 
+    return run_sth( request_hash, request.json )
+
+################################################################
+###### STH/SCH: roundworm / whipworm / hookwork / mansoni ######
+################################################################
+def run_sth( request_hash, params ):
+
+    disease = params[ 'disease' ]
+
     try:
 
-        iu = request.json[ 'iu' ]
+        iu = params[ 'iu' ]
         country = iu[ 0:3 ]
         iu_id = iu[ 3: ]
-        column_names = request.json[ 'mdaData' ][ 0 ]
-        mda_data = request.json[ 'mdaData' ][ 1: ]
-        numReps = 200 if request.json[ 'runs' ] > 200 else request.json[ 'runs' ]
+        column_names = params[ 'mdaData' ][ 0 ]
+        mda_data = params[ 'mdaData' ][ 1: ]
+        numReps = 200 if params[ 'runs' ] > 200 else params[ 'runs' ]
 
         paramFileName = parameter_file_names[ disease ]
         file_abbrev = file_name_disease_abbreviations[ disease ]
@@ -99,18 +120,19 @@ def run():
             'msg': str( e )
         } )
 
-
+    ############################################################################
 
     # set up all the file paths
-    source_data_path_root = f"diseases/{disease}/source-data-20210322a"
+    source_data_path_root = f"diseases/{disease}/source-data-redesign2021" # TODO FIXME
     source_data_gcs_path_root = f"/{bucket_name}/{source_data_path_root}"
 
-    output_data_path_root = f"diseases/{disease}/data-20210322a"
+    output_data_path_root = f"diseases/{disease}/output-data"
     output_data_gcs_path_root = f"/{bucket_name}/{output_data_path_root}"
 
     OutputDirectoryPath = f"{output_data_path_root}/{country}/{iu}/{request_hash}"
     OutputDirectoryGsPath = f"/{bucket_name}/{OutputDirectoryPath}"
 
+    ############################################################################
 
     # Input MDA file to be generated from input
     MDAFilePath = f"{OutputDirectoryPath}/InputMDA-{request_hash}.csv"
@@ -163,6 +185,7 @@ def run():
     GcsHistoricalMHISACPrevSummaryFilePath = f"{OutputDirectoryPath}/{HistoricalMHISACPrevSummaryFileName}"
     HttpsHistoricalMHISACPrevSummaryFilePath = f"{https_prefix}{OutputDirectoryGsPath}/{HistoricalMHISACPrevSummaryFileName}"
 
+    ############################################################################
 
     # stick it all in a dict to save to storage and send to client on success
     Result = {
@@ -178,13 +201,14 @@ def run():
         'futureMHISACSummaryUrl': HttpsPrevMHISACSummaryFilePath,
     }
 
+    ############################################################################
 
     # convert the incoming scenario mdaData to a CSV and write it to GCS
     try:
 
         pandas.DataFrame(
-            request.json[ 'mdaData' ][ 1: ],
-            columns = request.json[ 'mdaData' ][ 0 ]
+            params[ 'mdaData' ][ 1: ],
+            columns = params[ 'mdaData' ][ 0 ]
         ).to_csv(
             GcsMDAFilePath,
             index = None
@@ -197,6 +221,7 @@ def run():
             'msg': str( e )
         } )
 
+    ############################################################################
 
     # run the scenario, if its output hasn't already been written to cloud storage
     if (
@@ -241,6 +266,7 @@ def run():
         # summarize historical MHISAC prevalence data
         generate_summary( GcsHistoricalMHISACPrevFilePath, GcsHistoricalMHISACPrevSummaryFilePath )
 
+    ############################################################################
 
     try:
 
@@ -261,6 +287,141 @@ def run():
             'msg': str( e )
         } )
 
+
+######################
+###### TRACHOMA ######
+######################
+def run_trachoma( request_hash, params ):
+
+    print_function = app.logger.info if app.logger is not None else print
+
+    disease = 'trachoma'
+    file_abbrev = file_name_disease_abbreviations[ disease ]
+
+    try:
+
+        # fill in params from UI input
+        iu = params[ 'iu' ]
+        country = iu[ 0:3 ]
+        iu_id = iu[ 3: ]
+        numReps = 200 if params[ 'runs' ] > 200 else params[ 'runs' ]
+        MDA_Cov = params[ 'coverage' ]
+        mda_list = params[ 'mdaRounds' ]
+
+        print_function( f"running Trachoma simulation for {iu} {country} {iu_id} {numReps} {mda_list}" )
+
+        # source directory info
+        source_data_path_root = f"diseases/{disease}/source-data"
+        source_data_gcs_path_root = f"/{bucket_name}/{source_data_path_root}"
+
+        source_directory_path = f"{source_data_path_root}/{country}/{iu}"
+        source_directory_gs_path = f"/{bucket_name}/{source_directory_path}"
+
+        # output directory info
+        output_data_path_root = f"diseases/{disease}/output-data"
+        output_data_gcs_path_root = f"/{bucket_name}/{output_data_path_root}"
+
+        output_directory_path = f"{output_data_path_root}/{country}/{iu}/{request_hash}"
+        output_directory_gs_path = f"/{bucket_name}/{output_directory_path}"
+
+        # generate Input MDA file from input
+        mda_file_name = f"InputMDA-{request_hash}.csv"
+        mda_file_gcs_path = f"{gs_prefix}{output_directory_gs_path}/{mda_file_name}"
+
+        # Input MDA data
+        df = pandas.DataFrame.from_records( [ {
+            'start_sim_year': 2020,
+            'end_sim_year': 2030,
+            'first_mda': '',
+            'last_mda': '',
+            'mda_vector': json.dumps( mda_list )
+        } ] )
+
+        # write Input MDA to file
+        df.to_csv( mda_file_gcs_path, index=None )
+
+        # set up GCS & file paths for simulation
+        bet_file_gcs_path = f"{gs_prefix}{source_directory_gs_path}/InputBet_{country}{iu_id}.csv"
+        infect_file_gcs_path = f"{gs_prefix}{output_directory_gs_path}/InfectFile-{request_hash}.csv"
+        in_sim_file_path = f"{source_directory_path}/OutputVals_{country}{iu_id}.p"
+
+        output_prevalence_file_name = f"OutputPrev-{request_hash}.csv"
+        output_prevalence_blob_path = f"{output_directory_gs_path}/{output_prevalence_file_name}"
+        output_prevalence_gcs_path = f"{gs_prefix}{output_directory_gs_path}/{output_prevalence_file_name}"
+        output_prevalence_https_path = f"{https_prefix}{output_directory_gs_path}/{output_prevalence_file_name}"
+
+        # make a json file path to summarise it into
+        summary_json_file_name = f"OutputPrev-{request_hash}-summary.json"
+        summary_json_gcs_path = f"{output_directory_path}/{summary_json_file_name}"
+        summary_json_https_path = f"{https_prefix}{output_directory_gs_path}/{summary_json_file_name}"
+
+        # put together historical prevalence file paths
+        historical_prevalence_filename = f"OutputPrev_{country}{iu_id}.csv"
+        historical_prevalence_gcs_path = f"{gs_prefix}{source_directory_gs_path}/{historical_prevalence_filename}"
+        historical_prevalence_https_path = f"{https_prefix}{source_directory_gs_path}/{historical_prevalence_filename}"
+
+        # check for existing historical prevalence summary
+        historical_prevalence_summary_filename = f"OutputPrev_{country}{iu_id}-summary.json"
+        historical_prevalence_summary_blob_path = f"{source_directory_gs_path}/{historical_prevalence_summary_filename}"
+        historical_prevalence_summary_gcs_path = f"{source_directory_path}/{historical_prevalence_summary_filename}"
+        historical_prevalence_summary_https_path = f"{https_prefix}{source_directory_gs_path}/{historical_prevalence_summary_filename}"
+
+        # stick it all in a dict to save to storage and send to client on success
+        Result = {
+            'status': True,
+            'isNewSimulation': False,
+            'historicalDataUrl': historical_prevalence_https_path,
+            'historicalSummaryUrl': historical_prevalence_summary_https_path,
+            'futureDataUrl': output_prevalence_https_path,
+            'futureSummaryUrl': summary_json_https_path,
+        }
+
+        if not blob_exists( output_prevalence_blob_path ):
+
+            # we're about to kick off a new simulation
+            Result[ 'isNewSimulation' ] = True
+
+            # run the simulation
+            Trachoma_Simulation(
+                BetFilePath=bet_file_gcs_path,
+                MDAFilePath=mda_file_gcs_path,
+                PrevFilePath=output_prevalence_gcs_path,
+                InfectFilePath=infect_file_gcs_path,
+                InSimFilePath=in_sim_file_path,
+                SaveOutput=False,
+                OutSimFilePath=None,
+                MDA_Cov=MDA_Cov,
+                numReps = numReps,
+                useCloudStorage=True,
+                logger = app.logger
+            )
+
+            generate_summary( output_prevalence_gcs_path, summary_json_gcs_path )
+
+            # generate & write one out if it doesn't exist
+            if not blob_exists( historical_prevalence_summary_blob_path ):
+                generate_summary( historical_prevalence_gcs_path, historical_prevalence_summary_gcs_path )
+
+        # snag the output for sending to browser now
+        output_result_json = json.dumps( Result )
+
+        # save result to file for JS to hit next time
+        ResultJsonFilePath = f"{output_directory_path}/{file_abbrev}-{iu}-{request_hash}-info.json"
+        Result[ 'isNewSimulation' ] = False # because reading from static file means it's not new
+        write_string_to_file( json.dumps( Result ), ResultJsonFilePath )
+
+        return Response( output_result_json, mimetype = 'application/json; charset=UTF-8' )
+
+    except Exception as e:
+
+        return json.dumps( {
+            'status': False,
+            'msg': str( e )
+        } )
+
+##############################
+###### MAIN ENTRY POINT ######
+##############################
 
 if __name__ == '__main__':
     app.run( debug = False, host = '0.0.0.0' )
