@@ -25,6 +25,7 @@ RUN ls -l
 RUN grep -vw sys < flask_app.py > removed-sys-flask_app.py && mv -f removed-sys-flask_app.py flask_app.py
 
 # install the STH code
+RUN date
 RUN pip3 install .
 
 # port
