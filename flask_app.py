@@ -5,7 +5,7 @@ import logging
 import sys
 sys.path.insert( 1, '../ntd-model-trachoma' )
 
-from gcs import blob_exists, write_string_to_file, upload_file_to_blob
+from gcs import blob_exists, write_string_to_file, upload_file_to_blob, download_blob_to_file
 from datetime import datetime
 from flask import Flask, Response, request, abort
 from flask_cors import CORS, cross_origin
@@ -393,7 +393,8 @@ def run_trachoma( request_hash, params ):
                 MDA_Cov=MDA_Cov,
                 numReps = numReps,
                 useCloudStorage=True,
-                logger = app.logger
+                logger = app.logger,
+                download_blob_to_file = download_blob_to_file,
             )
 
             generate_summary( output_prevalence_gcs_path, summary_json_gcs_path )
