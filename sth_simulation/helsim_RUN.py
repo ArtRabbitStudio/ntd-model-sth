@@ -4,7 +4,6 @@ import time
 import uuid
 import functools
 import datetime
-import gcs
 import re
 
 from joblib import Parallel, delayed
@@ -29,9 +28,7 @@ def timer(func):
 @timer
 def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevKKSACFilePath=None, PrevMHISACFilePath=None,
                    RkFilePath=None, nYears=None, outputFrequency=None, numReps=None, SaveOutput=False,
-                   OutSimFilePath=None, InSimFilePath=None, useCloudStorage=False, logger=None):
-
-    print_function = logger.info if logger is not None else print
+                   OutSimFilePath=None, InSimFilePath=None, useCloudStorage=False, cloudModule=None, logger=None):
 
     '''
     Longitudinal simulations.
@@ -96,10 +93,25 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevKKSACFilePath=None
         not provided, the code will start new simulations
         from scratch.
 
+    useCloudStorage: bool
+        If True, use the supplied 'cloudModule' module to access
+        'pickled' data in InSimFilePath. Otherwise just load from
+        the filesystem path in InSimFilePath using pickle.load().
+
+    cloudModule: module
+        Cloud storage access module which provides a funciont
+        get_blob( FileUrl ) to access 'pickled' data.
+
+    logger: module
+        Logging module possibly provided by app including this module.
+
     Returns:
     -----------
     None.
     '''
+
+    # use provided logger, if supplied
+    print_function = logger.info if logger is not None else print
 
     # make sure that the user has provided all the necessary inputs
     if PrevKKSACFilePath is not None and '.csv' not in PrevKKSACFilePath:
@@ -119,6 +131,9 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevKKSACFilePath=None
 
     elif InSimFilePath is not None and '.p' not in InSimFilePath:
         message = 'Please provide the directory to the input pickle file.'
+
+    elif useCloudStorage is True and cloudModule is None:
+        message = 'You need to pass in the "cloudModule" module if you want to "useCloudStorage".'
 
     else:
 
@@ -189,7 +204,7 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevKKSACFilePath=None
         else:  # continue previous simulations
 
             # load the previous simulation results
-            pickleData = pickle.loads( gcs.get_blob( InSimFilePath ) ) if useCloudStorage else pickle.load(open(InSimFilePath, 'rb'))
+            pickleData = pickle.loads( cloudModule.get_blob( InSimFilePath ) ) if useCloudStorage else pickle.load(open(InSimFilePath, 'rb'))
 
             def multiple_simulations(params, i):
 
