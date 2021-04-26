@@ -62,11 +62,21 @@ The `STH_Simulation()` function requires the following inputs:
         not provided, the code will start new simulations
         from scratch.
 
-    useCloudStorage: bool
-        Indicates whether the model should treat incoming
-        paths as GCS gs:// urls (True) or filesystem paths
-        (False). 
-        
+	useCloudStorage: bool
+	    Indicates whether the model should treat incoming
+	    paths as GCS gs:// urls (True) or filesystem paths
+	    (False). If True, use the supplied 'cloudModule' module
+	    to access 'pickled' data in InSimFilePath. Otherwise
+	    load from the filesystem path in InSimFilePath as normal
+	    using pickle.load().
+
+	cloudModule: module
+	    Cloud storage access module which provides a function
+	    get_blob( FileUrl ) to access 'pickled' data.
+
+	logger: module
+	    Logging module possibly provided by app including this module.
+
 Some examples are included in the Jupyter notebook `sth_tests.ipynb` in the `tests` folder.
 
 ### How to run

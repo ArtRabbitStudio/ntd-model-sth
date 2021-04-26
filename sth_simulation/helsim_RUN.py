@@ -94,12 +94,15 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevKKSACFilePath=None
         from scratch.
 
     useCloudStorage: bool
-        If True, use the supplied 'cloudModule' module to access
-        'pickled' data in InSimFilePath. Otherwise just load from
-        the filesystem path in InSimFilePath using pickle.load().
+        Indicates whether the model should treat incoming
+        paths as GCS gs:// urls (True) or filesystem paths
+        (False). If True, use the supplied 'cloudModule' module
+        to access 'pickled' data in InSimFilePath. Otherwise
+        load from the filesystem path in InSimFilePath as normal
+        using pickle.load().
 
     cloudModule: module
-        Cloud storage access module which provides a funciont
+        Cloud storage access module which provides a function
         get_blob( FileUrl ) to access 'pickled' data.
 
     logger: module
