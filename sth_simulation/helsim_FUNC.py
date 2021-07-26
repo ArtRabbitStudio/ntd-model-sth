@@ -154,6 +154,7 @@ def readParams(paramFileName, demogFileName='Demographies.txt', demogName='Defau
               'muBreaks': np.append(0, demographies[demogName + '_upperBoundData']),
               'SR': [True if parameters['StochSR'] == 'TRUE' else False][0],
               'reproFuncName': parameters['reproFuncName'],
+              'unfertilized': parameters['unfertilized'] == "TRUE",
               'z': np.exp(-parameters['gamma']),
               'psi': 1.0}
 
@@ -652,7 +653,7 @@ def getSetOfEggCounts(total, female, params, Unfertilized=True):
     random set of egg count readings from a single sample;
     '''
 
-    if Unfertilized:
+    if params["unfertilized"]:
 
         meanCount = female * params['lambda'] * params['z'] ** female
 
