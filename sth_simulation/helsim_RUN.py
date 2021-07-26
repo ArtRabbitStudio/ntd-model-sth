@@ -199,7 +199,6 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevKKSACFilePath=None
                 parameters = configure(parameters)
                 parameters['psi'] = getPsi(parameters)
                 parameters['equiData'] = getEquilibrium(parameters)
-                parameters['moderateIntensityCount'], parameters['highIntensityCount'] = setIntensityCount(paramFileName)
 
                 # generate a simulation path
                 return doRealization(params=parameters, seed=seed[i])
@@ -239,7 +238,6 @@ def STH_Simulation(paramFileName, demogName, MDAFilePath, PrevKKSACFilePath=None
                 parameters = configure(parameters)
                 parameters['psi'] = getPsi(parameters)
                 parameters['equiData'] = getEquilibrium(parameters)
-                parameters['moderateIntensityCount'], parameters['highIntensityCount'] = setIntensityCount(paramFileName)
 
                 # add a simulation path
                 return addRealization(params=parameters, simData=simData, times=times, state=state)

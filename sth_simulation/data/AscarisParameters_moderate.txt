@@ -24,7 +24,8 @@ gamma	0.07	Exponential density dependence of parasite adult stage (gamma) N.B. f
 
 ### Sexual reproduction styles. 
 reproFuncName	epgFertility	## name of function for reproduction (a string).  [Deterministic] 
-StochSR	TRUE		## Turn SR on or off in the stochastic model. 	[Stochastic]  
+StochSR	TRUE		## Turn SR on or off in the stochastic model. 	[Stochastic]
+unfertilized		TRUE
 
 ### Treatment parameters. 
 treatmentBreaks	0 2 5 15 70		Minimum age of each treatment group (minus sign necessary to include zero age): Infants; Pre-SAC; SAC; Adults
@@ -46,4 +47,8 @@ k_epg	0.3
 ### Simulation-specific parameters
 nNodes	8	## number of cores, in practice is detected automatically on cluster 
 maxStep	0.01923	## max time step for deterministic update of freeliving populations, approx 1/52
-seed	123	## 
+seed	123	##
+
+### egg counts
+moderateIntensityCount	208.3
+highIntensityCount	2083.3
