@@ -5,53 +5,6 @@ import pkg_resources
 
 import sth_simulation.ParallelFuncs as ParallelFuncs
 
-def setIntensityCount(paramFileName):
-
-    '''
-    This function defines the intensity thresholds and converts them to egg counts.
-    Note that 24 is a conversion factor from epg (eggs per gram faeces) to egg counts
-    on a microscopy slide of a faecal smear test.
-
-    Ascaris: moderate intensity: 5,000, high intensity: 50,000.
-    Trichuris: moderate intensity: 1,000, high intensity: 10,000.
-    Hookworm: moderate intensity: 2,000, high intensity: 4,000.
-
-    Parameters
-    ----------
-    paramFileName: str
-        name of the input text file;
-
-    Returns
-    -------
-    moderateIntensityCount: float
-        moderate intensity threshold;
-
-    highIntensityCount: float
-        high intensity threshold;
-    '''
-
-    if paramFileName == 'AscarisParameters_moderate.txt' or paramFileName == 'AscarisParameters_high.txt':
-
-        moderateIntensityCount = 5000 / 24
-        highIntensityCount = 50000 / 24
-
-    elif paramFileName == 'TrichurisParameters_moderate.txt' or paramFileName == 'TrichurisParameters_high.txt':
-
-        moderateIntensityCount = 1000 / 24
-        highIntensityCount = 10000 / 24
-
-    elif paramFileName == 'HookwormParameters_moderate.txt' or paramFileName == 'HookwormParameters_high.txt':
-
-        moderateIntensityCount = 2000 / 24
-        highIntensityCount = 4000 / 24
-
-    elif paramFileName == 'SCH_MansoniParameters.txt' or paramFileName == 'SCH_HaematobiumParameters.txt':
-
-        moderateIntensityCount = 100 / 24
-        highIntensityCount = 400 / 24
-
-    return moderateIntensityCount, highIntensityCount
-
 def readParam(fileName):
 
     '''

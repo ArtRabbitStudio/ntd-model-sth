@@ -46,4 +46,8 @@ k_epg	0.3
 ### Simulation-specific parameters
 nNodes	8	## number of cores, in practice is detected automatically on cluster 
 maxStep	0.01923	## max time step for deterministic update of freeliving populations, approx 1/52
-seed	123	## 
+seed	123	##
+
+### egg counts
+moderateIntensityCount	208.3
+highIntensityCount	2083.3
