@@ -154,6 +154,7 @@ def readParams(paramFileName, demogFileName='Demographies.txt', demogName='Defau
               'muBreaks': np.append(0, demographies[demogName + '_upperBoundData']),
               'SR': [True if parameters['StochSR'] == 'TRUE' else False][0],
               'reproFuncName': parameters['reproFuncName'],
+              'unfertilized': parameters['unfertilized'] == "TRUE",
               'z': np.exp(-parameters['gamma']),
               'psi': 1.0}
 
@@ -627,7 +628,7 @@ def getEquilibrium(params):
                 L_stable=L_stable,
                 L_hat=L_hat)
 
-def getSetOfEggCounts(total, female, params, Unfertilized=True):
+def getSetOfEggCounts(total, female, params):
 
     '''
     This function returns a set of readings of egg counts from a vector of individuals,
@@ -644,15 +645,12 @@ def getSetOfEggCounts(total, female, params, Unfertilized=True):
     params: dict
         dictionary containing the parameter names and values;
 
-    Unfertilized: bool
-        True / False flag for whether unfertilized worms generate eggs;
-
     Returns
     -------
     random set of egg count readings from a single sample;
     '''
 
-    if Unfertilized:
+    if params["unfertilized"]:
 
         meanCount = female * params['lambda'] * params['z'] ** female
 
@@ -663,7 +661,7 @@ def getSetOfEggCounts(total, female, params, Unfertilized=True):
 
     return np.random.negative_binomial(size=len(meanCount), p=params['k_epg'] / (meanCount + params['k_epg']), n=params['k_epg'])
 
-def getVillageMeanCountsByHost(SD, params, nSamples=1, Unfertilized=True):
+def getVillageMeanCountsByHost(SD, params, nSamples=1):
 
     '''
     This function returns the mean egg count across readings by host.
@@ -679,17 +677,14 @@ def getVillageMeanCountsByHost(SD, params, nSamples=1, Unfertilized=True):
     nSamples: int
         number of samples;
 
-    Unfertilized: bool
-        True / False flag for whether unfertilized worms generate eggs;
-
     Returns
     -------
     array of mean egg counts;
     '''
 
-    return getSetOfEggCounts(SD['worms']['total'], SD['worms']['female'], params, Unfertilized)
+    return getSetOfEggCounts(SD['worms']['total'], SD['worms']['female'], params)
 
-def getWormCountsByVillage(SD, t, ageBand, params, nSamples=1, Unfertilized=True, hostSampleSizeFrac=1.0):
+def getWormCountsByVillage(SD, t, ageBand, params, nSamples=1, hostSampleSizeFrac=1.0):
 
     '''
     This function provides sampled, age-cat worm counts.
@@ -711,9 +706,6 @@ def getWormCountsByVillage(SD, t, ageBand, params, nSamples=1, Unfertilized=True
     nSamples: int
         number of samples;
 
-    Unfertilized: bool
-        True / False flag for whether unfertilized worms generate eggs;
-
     hostSampleSizeFrac: float;
         host sample size fraction;
 
@@ -723,7 +715,7 @@ def getWormCountsByVillage(SD, t, ageBand, params, nSamples=1, Unfertilized=True
     '''
 
     # get readings from the hosts
-    meanEggCounts = getVillageMeanCountsByHost(SD, params, nSamples, Unfertilized)
+    meanEggCounts = getVillageMeanCountsByHost(SD, params, nSamples)
 
     # get ages, filter age group
     ageGroups = pd.cut(x=t - SD['demography']['birthDate'], bins=np.append(-10, np.append(ageBand, 150)),
@@ -735,7 +727,7 @@ def getWormCountsByVillage(SD, t, ageBand, params, nSamples=1, Unfertilized=True
 
     return dict(meanEggCountSample=meanEggCountSample, villageSampleSize=villageSampleSize)
 
-def getAgeCatSampledPrevByVillage(SD, t, ageBand, params, nSamples=1, Unfertilized=True, hostSampleSizeFrac=1.0):
+def getAgeCatSampledPrevByVillage(SD, t, ageBand, params, nSamples=1, hostSampleSizeFrac=1.0):
 
     '''
     This function provides sampled, age-cat worm prevalence.
@@ -757,9 +749,6 @@ def getAgeCatSampledPrevByVillage(SD, t, ageBand, params, nSamples=1, Unfertiliz
     nSamples: int
         number of samples;
 
-    Unfertilized: bool
-        True / False flag for whether unfertilized worms generate eggs;
-
     hostSampleSizeFrac: float;
         host sample size fraction;
 
@@ -768,11 +757,11 @@ def getAgeCatSampledPrevByVillage(SD, t, ageBand, params, nSamples=1, Unfertiliz
     sampled worm prevalence;
     '''
 
-    countData = getWormCountsByVillage(SD, t, ageBand, params, nSamples, Unfertilized, hostSampleSizeFrac)
+    countData = getWormCountsByVillage(SD, t, ageBand, params, nSamples, hostSampleSizeFrac)
 
     return np.sum(countData['meanEggCountSample'] > 0.9) / countData['villageSampleSize']
 
-def getMediumHeavyPrevalenceByVillage(SD, t, ageBand, eggCountThreshold, params, nSamples=1, Unfertilized=True,
+def getMediumHeavyPrevalenceByVillage(SD, t, ageBand, eggCountThreshold, params, nSamples=1,
                                       hostSampleSizeFrac=1.0):
 
     '''
@@ -798,9 +787,6 @@ def getMediumHeavyPrevalenceByVillage(SD, t, ageBand, eggCountThreshold, params,
     nSamples: int
         number of samples;
 
-    Unfertilized: bool
-        True / False flag for whether unfertilized worms generate eggs;
-
     hostSampleSizeFrac: float;
         host sample size fraction;
 
@@ -809,7 +795,7 @@ def getMediumHeavyPrevalenceByVillage(SD, t, ageBand, eggCountThreshold, params,
     prevalence by village;
     '''
 
-    countData = getWormCountsByVillage(SD, t, ageBand, params, nSamples, Unfertilized, hostSampleSizeFrac)
+    countData = getWormCountsByVillage(SD, t, ageBand, params, nSamples, hostSampleSizeFrac)
 
     return np.sum(countData['meanEggCountSample'] >= eggCountThreshold) / countData['villageSampleSize']
 
